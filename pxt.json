@@ -1,0 +1,39 @@
+{
+    "name": "dstemp",
+    "version": "0.1.10",
+    "description": "Dallas/Maxim DS18B20 Temperature Probe",
+    "license": "MIT",
+    "dependencies": {
+        "core": "*"
+    },
+    "card": {
+        "name":"DS Temp Sensors",
+        "imageUrl":"file:../dstemp/icon.png",
+        "feedbackUrl":"http://siever.info"
+    },
+    "files": [
+        "README.md",
+        "dstemp.ts",
+        "dstemp.cpp",
+        "shims.d.ts",
+        "enums.d.ts",
+        "pxtparts.json",
+        "parts/ds18b20probe.svg",
+        "_locales/ja/neopixel-strings.json",
+        "_locales/de/neopixel-strings.json",
+        "_locales/de/neopixel-jsdoc-strings.json"
+    ],
+    "testFiles": [
+        "dstest.ts"
+    ],
+    "public": true,
+    "extension": {
+        "namespace": "dstemp",
+        "label": "Simulation Settings",
+        "localUrl": "http://127.0.0.1:8080/index.html"
+    },
+    "targetVersions": {
+        "target": "1.1.90"
+    },
+    "installedVersion": "file:../../libs/dstemp"
+}

@@ -1,0 +1,42 @@
+{
+    "dstemp": {
+        "visual": {
+            "image": "parts/ds18b20probe.svg",
+            "width": 54,
+            "height": 20,
+            "pinDistance": 3,
+            "pinLocations": [
+                {"x": 0.5, "y": 1.8},
+                {"x": 3.5, "y": 1.8},
+                {"x": 6.5, "y": 1.8}
+            ]
+        },
+        "numberOfPins": 3,
+        "instantiation": {
+            "kind": "function",
+            "fullyQualifiedName": "dstemp.celsius",
+            "argumentRoles": [{
+                    "pinInstantiationIdx": 0
+                }]
+        },
+        "pinDefinitions": [
+            {"target": {"pinInstantiationIdx": 0}, "style": "croc", "orientation": "+Z" },
+            {"target": "threeVolt", "style": "croc", "orientation": "+Z" },
+            {"target": "ground", "style": "croc", "orientation": "+Z" }
+        ],
+        "assembly": [
+            {
+                "part": true,
+                "pinIndices": [
+                    0
+                ]
+            },
+            {
+                "pinIndices": [
+                    1,
+                    2
+                ]
+            }
+        ]
+    }
+}

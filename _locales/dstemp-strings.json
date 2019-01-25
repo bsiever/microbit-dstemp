@@ -1,0 +1,6 @@
+{
+  "dstemp.celsius|block": "Temp. in Celsius on %pin|",
+  "dstemp.sensorError|block": "Temp. Sensor Error",
+  "dstemp|block": "DS Temp",
+  "{id:category}Dstemp": "Dstemp"
+}

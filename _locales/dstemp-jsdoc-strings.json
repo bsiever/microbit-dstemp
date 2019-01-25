@@ -1,0 +1,5 @@
+{
+  "dstemp": "Bill Siever\n2018-10-10\n* Development environment specifics:\nWritten in Microsoft PXT\nBased on SparkFun weather:bit for micro:bit (https://github.com/sparkfun/pxt-weather-bit)\n* This code is released under the [MIT License](http://opensource.org/licenses/MIT).\nPlease review the LICENSE.md file included with this example. If you have any questions \nor concerns with licensing, please contact techsupport@sparkfun.com.\nDistributed as-is; no warranty is given.",
+  "dstemp.sensorError": "Set a handler for errors",
+  "dstemp.sensorError|param|errCallback": "The error handler "
+}
