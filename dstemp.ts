@@ -46,7 +46,8 @@ namespace dstemp {
      * Set a handler for errors 
      * @param errCallback The error handler 
      */
-    //% blockId="error" block="Temp. Sensor Error" draggableParameters=reporter
+    //% blockId="error" block="Temp. Sensor Error" 
+    //% draggableParameters="reporter"
     export function sensorError(errCallback: (ErrorMessage: string, ErrorCode: number, Port: number) => void) { 
         //console.log("Registering...");
         
