@@ -1,6 +1,6 @@
 {
     "name": "dstemp",
-    "version": "0.1.10",
+    "version": "0.1.11",
     "description": "Dallas/Maxim DS18B20 Temperature Probe",
     "license": "MIT",
     "dependencies": {
