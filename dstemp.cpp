@@ -71,7 +71,7 @@ namespace dstemp {
     // ************* State variables 
     // TODO: Can these be "shared", like functions
     int errorObjectIdx = 0;
-    int errorPort = -1;
+    int errorPort = 0;
     Action errorHandler = NULL;
 
     // ************* Blocks 
