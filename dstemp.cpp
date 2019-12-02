@@ -22,7 +22,7 @@
 #include "PinNames.h"
 #include "nrf.h"
 
-#define DEBUG 1
+#define DEBUG 0
 // DEBUG uses ioPin P1 to indicate sampling of read (for timing calibration)
 using namespace pxt;
 
