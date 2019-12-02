@@ -23,8 +23,7 @@
 #include "nrf.h"
 
 #define DEBUG 0
-// DEBUG uses pin P1 to indicate sampling of read (for timing calibration)
-
+// DEBUG uses ioPin P1 to indicate sampling of read (for timing calibration)
 using namespace pxt;
 
 namespace dstemp { 
@@ -69,17 +68,11 @@ namespace dstemp {
 
     const int MAX_TRIES = 3;      // Max tries to attempt conversion before fail 
 
-    enum {
-        ERROR_NOT_CONNECTED = 1,
-        ERROR_START_CONVERSION,
-        ERROR_READ_TIMEOUT
-    };
-
     // ************* State variables 
     // TODO: Can these be "shared", like functions
     int errorObjectIdx = 0;
     int errorPort = -1;
-    Action errorHandler;
+    Action errorHandler = NULL;
 
     // ************* Blocks 
 
@@ -89,8 +82,11 @@ namespace dstemp {
         // Release any prior error handler
        // pxt::decr(errorHandler);
         errorHandler = a; 
-        pxt::incr(errorHandler);
+        if(errorHandler)    
+            pxt::incr(errorHandler);
     }
+ 
+
  
     /*
      * Helper method to send an actual error code to the registered handler.
@@ -107,7 +103,8 @@ namespace dstemp {
         // TODO: Find better approach to reverse pin mapping (from mbed pin ID back to microbit pins)
         //       This approach works for P0-P20 since pins IDs are contiguous from 0-20
         errorPort = port - MICROBIT_ID_IO_P0;
-        pxt::runAction0(errorHandler);            
+        if(errorHandler)
+            pxt::runAction0(errorHandler);            
     }
 
     /*  Configure the device for 12-bit conversion and set High/Low Alarm Values (Magic numbers too.)
@@ -119,6 +116,9 @@ namespace dstemp {
 #if DEBUG
             loopUntilSent("No Device Present\n");
 #endif
+            // Call error Handler
+            // TODO: Unify device code
+           
             return false;
         }
         // Write ROM command: Skip ROM Command CCh: To address all devices
@@ -173,20 +173,20 @@ namespace dstemp {
         for(int tries=0;tries<MAX_TRIES;tries++) {
             // A. Configure Device
             if(configure(ioPin)==false) {
-                error(ERROR_NOT_CONNECTED, pin);
+                error(1, pin);
                 return ERROR_SENTINEL;
             }
             
             // B. Start conversion
             if(startConversion(ioPin)) {
                 success = true;
-                break; // Leave the loop on success
+                break; // Leave the loop
             }            
         }
 
         // If unable to start conversion, return error
         if(success==false) {
-            error(ERROR_START_CONVERSION, pin);
+            error(2, pin);
             return ERROR_SENTINEL;
         }
 
@@ -219,8 +219,10 @@ namespace dstemp {
                 }
             }
         } 
-        // Error: Timeout on reads
-        error(ERROR_READ_TIMEOUT, pin);
+        // ERROR: Max Read Tries 
+        // Call error Handler
+        // TODO: Unify device code 
+        error(3, pin);
         // Return special sentinel value
         return ERROR_SENTINEL;
     }
@@ -268,9 +270,8 @@ namespace dstemp {
     // Wait out any remaining time to ensure the expected duration elapses after the start event.
     void waitOut(unsigned long start, unsigned long duration, bool yield) {
         // Yield to other threads
-        if(yield) { 
+        if(yield) 
           uBit.sleep(0);
-        }
 
         // If there's any time left to wait, wait
         int  waitTime = duration-(system_timer_current_time_us()-start);
@@ -455,6 +456,7 @@ loopUntilSent(buffer);
             waitOut(startTime, TIME_RESET_HIGH);
         }
 
+
 #if DEBUG
 loopUntilSent("\npres= ");
 loopUntilSent(presence);
@@ -465,12 +467,106 @@ loopUntilSent("\n");
         return success; // Return success or failure
     }
 
-}
-    /*  
-    ManagedString error("c err"); 
-    StringData *msg; 
-            if (ble_running())
-    LPSTR?  
+
+
+
+
+
+
+
+/*
+
+ inline float round(float v, int d) {
+        // Round away from 0. 
+        int sign = 1;
+        if (v == 0.0) {
+            return v;
+        } else if(v<0) {
+            sign = -1;
+        }
+        float frac = sign / (2.0 * d);
+        int intv = (int)((v + frac) * d);
+        return  intv / ((float)d);
+    }
+
 
 */
 
+    /*
+
+      float roundTests(int case) {
+        switch(case) {
+            case 0:
+                return round(.12,4);  // A: 0
+            case 1:
+                return round(-.12, 4);// B: 0
+            case 2:
+                return round(.125,4);// C: 0.25
+            case 3:
+                return round(-.125, 4);// D: -0.25
+            case 4:
+                return round(.126,4); // E: .25
+            case 5:
+                return round(-.126, 4); // F: -0.25
+            case 6:
+                return round(0.0, 4); // G: 0
+            case 7:
+                return round(-0.0, 4); // H: 0
+            default:  // I: 1
+                return 2;
+            }
+      }
+    */
+
+    /*    int count = 6;
+    ManagedString error("c err"); 
+    StringData *msg; 
+*/
+
+
+/*
+    // % 
+    void ctest() {
+        if (ble_running())
+          uBit.display.scroll("BLE");
+
+  //      uBit.display.scroll("go");
+        pxt::runAction0(errorHandler);
+
+
+
+    }
+
+*/
+
+   /**
+
+   */
+
+    /**
+    Phase 1:  Use external power and external Pull-up
+    Phase 2:  Try internal pull-up
+    Phase 3:  Parasitic power and internal pull-up (crazy!)
+    */
+}
+
+/*
+    void setupioPin(int ioPin) {
+        // Setup the ioPin (Phase 1)
+       // ioPin = new DigitalInOut(ioPin, PullUp, OpenDrain, 1);
+
+    }
+
+
+    // % 
+    void setup(int ioPin) {
+        uBit.display.scroll("p");
+        uBit.display.scroll(ioPin);
+// Setup ioPin
+//  Input Pullup: CNF[ioPin].PULL = 3  // Pullup
+//  CNF[ioPin].DIR = 
+//  CNF[ioPin].Input = 
+//  CNF[ioPin].Drive = 6  // Std 0 &  Disconnect 1  
+
+    } 
+*/
