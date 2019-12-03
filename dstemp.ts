@@ -45,8 +45,7 @@ namespace dstemp {
      * @param errCallback The error handler 
      */
     //% blockId="error" block="Temp. Sensor Error"
-    //% mutate=objectdestructuring
-    //% mutateDefaults="ErrorMessage,ErrorCode,Port"
+    //% draggableParameters="reporter"
     export function sensorError(errCallback: (ErrorMessage: string, ErrorCode: number, Port: number) => void) { 
         if(errCallback) {
             errorHandler = () => {
