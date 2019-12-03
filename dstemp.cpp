@@ -71,16 +71,16 @@ namespace dstemp {
     // ************* State variables 
     // TODO: Can these be "shared", like functions
     int errorObjectIdx = 0;
-    int errorPort = -1;
+    int errorPort = 0;
     Action errorHandler = NULL;
 
     // ************* Blocks 
 
-
     //% 
     void setErrorHandler(Action a) {
         // Release any prior error handler
-       // pxt::decr(errorHandler);
+       if(errorHandler)
+         pxt::decr(errorHandler);
         errorHandler = a; 
         if(errorHandler)    
             pxt::incr(errorHandler);
@@ -103,8 +103,12 @@ namespace dstemp {
         // TODO: Find better approach to reverse pin mapping (from mbed pin ID back to microbit pins)
         //       This approach works for P0-P20 since pins IDs are contiguous from 0-20
         errorPort = port - MICROBIT_ID_IO_P0;
-        if(errorHandler)
+        if(errorHandler) {
+#if DEBUG
+        loopUntilSent("calling handler\n"); 
+#endif
             pxt::runAction0(errorHandler);            
+        }
     }
 
     /*  Configure the device for 12-bit conversion and set High/Low Alarm Values (Magic numbers too.)

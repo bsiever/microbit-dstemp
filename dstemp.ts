@@ -2,10 +2,8 @@
 //% icon="\uf2c8"
 //% block="DS Temp"
 namespace dstemp {
-
     // TODO: Review better approach.  These are redundant when on the platform (C-Side)
     // TODO: Is there a way to "share" fields/variables (without an object)
-
     //% whenUsed
     let errorHandler:Action = null;
     //% whenUsed
@@ -46,14 +44,20 @@ namespace dstemp {
      * Set a handler for errors 
      * @param errCallback The error handler 
      */
-    //% blockId="error" block="Temp. Sensor Error" 
-    //% draggableParameters="reporter"
+    //% blockId="error" block="Temp. Sensor Error"
+    //% mutate=objectdestructuring
+    //% mutateDefaults="ErrorMessage,ErrorCode,Port"
     export function sensorError(errCallback: (ErrorMessage: string, ErrorCode: number, Port: number) => void) { 
-        //console.log("Registering...");
-        
-        setErrorHandler(function() { let i = getErrorObjectIdx();  
-                                     let p = getErrorPort();
-                                     errCallback(errorMsgs[i], i, p) }); 
+        if(errCallback) {
+            errorHandler = () => {
+                let i  = getErrorObjectIdx(); 
+                let p = getErrorPort();
+                errCallback(errorMsgs[i], i, p);          
+            };
+        } else {
+            errorHandler = null;
+        }
+        setErrorHandler(errorHandler);
     };
 }
 
