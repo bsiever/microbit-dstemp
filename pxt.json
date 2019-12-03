@@ -1,15 +1,15 @@
 {
     "name": "dstemp",
-    "version": "0.1.12",
+    "version": "0.1.13",
     "description": "Dallas/Maxim DS18B20 Temperature Probe",
     "license": "MIT",
     "dependencies": {
         "core": "*"
     },
     "card": {
-        "name":"DS Temp Sensors",
-        "imageUrl":"file:../dstemp/icon.png",
-        "feedbackUrl":"http://siever.info"
+        "name": "DS Temp Sensors",
+        "imageUrl": "file:../dstemp/icon.png",
+        "feedbackUrl": "http://siever.info"
     },
     "files": [
         "README.md",
