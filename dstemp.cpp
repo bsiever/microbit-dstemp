@@ -18,13 +18,21 @@
 // #include "ble/BLE.h"
 // #include "ble.h"
 #include "app_error.h"
-#include "mbed.h"
+// #include "mbed.h"
 #include "PinNames.h"
 #include "nrf.h"
+#include "MicroBitSystemTimer.h"
 
 #define DEBUG 0
 // DEBUG uses ioPin P1 to indicate sampling of read (for timing calibration)
 using namespace pxt;
+
+uint64_t wait_us(uint64_t delay) {
+    uint64_t start = system_timer_current_time();
+    while(system_timer_current_time()-start < delay) {
+        // Intentionally empty;
+    }
+}
 
 namespace dstemp { 
 
