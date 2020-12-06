@@ -6,11 +6,6 @@
     "dependencies": {
         "core": "*"
     },
-    "card": {
-        "name": "DS Temp Sensors",
-        "imageUrl": "file:../dstemp/icon.png",
-        "feedbackUrl": "http://siever.info"
-    },
     "files": [
         "README.md",
         "dstemp.ts",
@@ -27,13 +22,18 @@
         "dstest.ts"
     ],
     "public": true,
+    "supportedTargets": [
+        "microbit"
+    ],
+    "preferredEditor": "tsprj",
+    "card": {
+        "name": "DS Temp Sensors",
+        "imageUrl": "file:../dstemp/icon.png",
+        "feedbackUrl": "http://siever.info"
+    },
     "extension": {
         "namespace": "dstemp",
         "label": "Simulation Settings",
         "localUrl": "http://127.0.0.1:8080/index.html"
-    },
-    "targetVersions": {
-        "target": "1.1.90"
-    },
-    "installedVersion": "file:../../libs/dstemp"
+    }
 }

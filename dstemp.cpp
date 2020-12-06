@@ -15,8 +15,8 @@
 #include "pxt.h"
 #include <cstdint>
 #include <math.h>
-#include "ble/BLE.h"
-#include "ble.h"
+// #include "ble/BLE.h"
+// #include "ble.h"
 #include "app_error.h"
 #include "mbed.h"
 #include "PinNames.h"
