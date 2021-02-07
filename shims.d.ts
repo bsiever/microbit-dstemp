@@ -4,7 +4,6 @@
     /**
      * Bill Siever
      * 2018-10-10
-     * 2020-02-07 CODAL and V2 updates
      *
      * Development environment specifics:
      * Written in Microsoft PXT
