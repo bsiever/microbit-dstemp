@@ -170,13 +170,11 @@ namespace dstemp {
     float celsius(int pin) {
         // pin is a pin ID 
 
-// Pins?? PinName???  PinNumber??
-        // Get corresponding I/O ioPin Object
+        // Get  I/O pin Object
         MicroBitPin *mbp = getPin(pin);
 
         // Set to input by default
         (void)mbp->getDigitalValue();
-        //MicroBitPin ioPin(mbp->name, PIN_INPUT, PullNone, 1);
 
 #if DEBUG
             loopUntilSent("Celsius Block\n");
@@ -208,7 +206,7 @@ namespace dstemp {
             // Wait for conversion to complete. 
             uBit.sleep(0);
         }
-     //   uBit.sleep(TIME_CONVERSION); // let other tasks run
+        uBit.sleep(TIME_CONVERSION); // let other tasks run
 
         // 3. Retrieve Data 
         for(int tries=0;tries<MAX_TRIES;tries++) {

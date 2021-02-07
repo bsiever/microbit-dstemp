@@ -13,15 +13,16 @@
         "shims.d.ts",
         "enums.d.ts",
         "pxtparts.json",
-        "parts/ds18b20probe.svg",
-        "_locales/ja/neopixel-strings.json",
-        "_locales/de/neopixel-strings.json",
-        "_locales/de/neopixel-jsdoc-strings.json"
+        "parts/ds18b20probe.svg"
     ],
     "testFiles": [
         "dstest.ts"
     ],
     "public": true,
+    "targetVersions": {
+        "target": "3.1.50",
+        "targetId": "microbit"
+    },
     "supportedTargets": [
         "microbit"
     ],
