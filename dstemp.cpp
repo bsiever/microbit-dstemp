@@ -334,8 +334,8 @@ namespace dstemp {
     bool readBit(MicroBitPin* ioPin) {
 
 #if DEBUG
-        DigitalOut indicate(MICROBIT_PIN_P1);
-        indicate.write(0);
+        MicroBitPin* indicate = getPin(MICROBIT_PIN_P1);
+        indicate->setDigitalValue(0);
 #endif 
         // Ensure recovery time
         ioPin->setDigitalValue(1);
@@ -344,7 +344,7 @@ namespace dstemp {
         // Start the transaction 
         unsigned long startTime = system_timer_current_time_us();
 #if DEBUG       
-        indicate.write(1);
+        indicate->setDigitalValue(1);
 #endif 
         ioPin->setDigitalValue(0);
         wait_us(TIME_READ_START);
@@ -357,7 +357,7 @@ namespace dstemp {
         //           Tests indicate that sample occurs at ~14.2uS from low (~end of 15uS window spec)
         b = (ioPin->getDigitalValue() == 1);
 #if DEBUG       
-        indicate.write(0);
+        indicate->setDigitalValue(0);
 #endif 
 
         // Wait out rest of slave access time 
@@ -369,7 +369,7 @@ namespace dstemp {
         // Wait out rest of slot 
         waitOut(startTime, TIME_SLOT);
 #if DEBUG       
-        indicate.write(0);
+        indicate->setDigitalValue(0);
 #endif 
 
         return b;
