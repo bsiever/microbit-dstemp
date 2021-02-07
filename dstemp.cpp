@@ -1,6 +1,7 @@
 /**
 * Bill Siever
 * 2018-10-10
+* 2020-02-07 CODAL and V2 updates
 *
 * Development environment specifics:
 * Written in Microsoft PXT
@@ -15,15 +16,12 @@
 #include "pxt.h"
 #include <cstdint>
 #include <math.h>
-// #include "ble/BLE.h"
-// #include "ble.h"
 #include "app_error.h"
-// #include "mbed.h"
-#include "PinNames.h"
 #include "nrf.h"
 #include "MicroBitSystemTimer.h"
 
-#define DEBUG 0
+
+#define DEBUG 1
 // DEBUG uses ioPin P1 to indicate sampling of read (for timing calibration)
 using namespace pxt;
 
@@ -32,6 +30,7 @@ uint64_t wait_us(uint64_t delay) {
     while(system_timer_current_time()-start < delay) {
         // Intentionally empty;
     }
+    return 0;
 }
 
 namespace dstemp { 
@@ -40,13 +39,13 @@ namespace dstemp {
     void loopUntilSent(ManagedString str);
     void loopUntilSent(int str);
     void waitOut(unsigned long start, unsigned long duration, bool yield = true);
-    void writeBit(DigitalInOut& ioPin, bool one, bool finalYield = true);
-    void writeByte(DigitalInOut& ioPin, uint8_t b, bool finalYield = true);
-    bool readBit(DigitalInOut& ioPin);
-    bool readScratchpad(DigitalInOut& ioPin, float& temp);
-    bool reset(DigitalInOut& ioPin);
-    bool configure(DigitalInOut& ioPin);
-    bool startConversion(DigitalInOut& ioPin);
+    void writeBit(MicroBitPin* ioPin, bool one, bool finalYield = true);
+    void writeByte(MicroBitPin* ioPin, uint8_t b, bool finalYield = true);
+    bool readBit(MicroBitPin* ioPin);
+    bool readScratchpad(MicroBitPin* ioPin, float& temp);
+    bool reset(MicroBitPin* ioPin);
+    bool configure(MicroBitPin* pin);
+    bool startConversion(MicroBitPin* ioPin);
 
     // ************* Timing related constants 
     // Times related to time slots and read/write operations
@@ -55,7 +54,7 @@ namespace dstemp {
     const int TIME_ZERO_LOW = TIME_SLOT;  // Zero low time = 60-120uS;  T_LOW0; Assume 100% of time slot
     const int TIME_ONE_LOW = 0; // One Low Time = 1-15uS; T_LOW1;  Hand calibrated via scope to be ~11.5uS
 
-//    const int TIME_READ_START = 1; // Not used / Read start (>uS);  Not used;  Hand calibrated via extra call
+    const int TIME_READ_START = 1; // Not used / Read start (>uS);  Not used;  Hand calibrated via extra call
     const int TIME_READ_OFFSET = 0; // Hand Calibrated via scope;  1uS+overhead ==> 15uS from beginning of cycle (no more than 15uS)
     const int TIME_SLAVE_WRITE_END = 61; // Time from start of cycle to the end of the slave impacting the bus: 15uS+45uS (rounded up)
 
@@ -123,7 +122,7 @@ namespace dstemp {
      *  @param ioPin the IO pin to use
      * @returns true on (assumed) success; false on known failure
      */
-    bool configure(DigitalInOut& ioPin) {
+    bool configure(MicroBitPin* ioPin) {
         if(reset(ioPin) == false) {
 #if DEBUG
             loopUntilSent("No Device Present\n");
@@ -152,7 +151,7 @@ namespace dstemp {
      *  @param ioPin the IO pin to use
      *  @returns true on  success; false on failure
      */
-    bool startConversion(DigitalInOut& ioPin) {
+    bool startConversion(MicroBitPin* ioPin) {
         if(reset(ioPin) == false) {
             return false;
         }
@@ -171,11 +170,13 @@ namespace dstemp {
     float celsius(int pin) {
         // pin is a pin ID 
 
+// Pins?? PinName???  PinNumber??
         // Get corresponding I/O ioPin Object
         MicroBitPin *mbp = getPin(pin);
 
         // Set to input by default
-        DigitalInOut ioPin(mbp->name, PIN_INPUT, PullNone, 1);
+        (void)mbp->getDigitalValue();
+        //MicroBitPin ioPin(mbp->name, PIN_INPUT, PullNone, 1);
 
 #if DEBUG
             loopUntilSent("Celsius Block\n");
@@ -184,13 +185,13 @@ namespace dstemp {
         // 1. Check for valid device, configure it for conversion, and start conversion
         for(int tries=0;tries<MAX_TRIES;tries++) {
             // A. Configure Device
-            if(configure(ioPin)==false) {
+            if(configure(mbp)==false) {
                 error(1, pin);
                 return ERROR_SENTINEL;
             }
             
             // B. Start conversion
-            if(startConversion(ioPin)) {
+            if(startConversion(mbp)) {
                 success = true;
                 break; // Leave the loop
             }            
@@ -203,7 +204,7 @@ namespace dstemp {
         }
 
         // 2. Wait for conversion to complete 
-        while(readBit(ioPin) == 0) {
+        while(readBit(mbp) == 0) {
             // Wait for conversion to complete. 
             uBit.sleep(0);
         }
@@ -212,14 +213,14 @@ namespace dstemp {
         // 3. Retrieve Data 
         for(int tries=0;tries<MAX_TRIES;tries++) {
             // If reset is successful, request and read data
-            if(reset(ioPin)) {
+            if(reset(mbp)) {
                 // Write ROM command: Skip ROM Command CCh: To address all devices
-                writeByte(ioPin, 0xCC);
+                writeByte(mbp, 0xCC);
                 // Write Function command - Read scratchpad 
-                writeByte(ioPin, 0xBE);        
+                writeByte(mbp, 0xBE);        
                 // Read 8 bytes of scratch pad
                 float temp;
-                success = readScratchpad(ioPin, temp);
+                success = readScratchpad(mbp, temp);
 
                 if(success) {
     #if DEBUG
@@ -294,22 +295,21 @@ namespace dstemp {
 
     /*
      * Write a bit
-     * @param ioPin The DigitalInOut pin to use. 
+     * @param ioPin The MicroBitPin pin to use. 
      * @param one A boolean: true indicates send a 1; false indicates send a 0
      */
-    void writeBit(DigitalInOut& ioPin, bool one, bool finalYield) {
+    void writeBit(MicroBitPin* ioPin, bool one, bool finalYield) {
         // Ensure recovery time
-        ioPin.output();
-        ioPin.write(1);
+        ioPin->setDigitalValue(1);
         wait_us(TIME_RECOV);
 
         // Start bus transaction
         unsigned long startTime = system_timer_current_time_us();
-        ioPin.write(0);
+        ioPin->setDigitalValue(0);
         // Time sensitive delay
         wait_us(one ? TIME_ONE_LOW : TIME_ZERO_LOW);
         // Restore the bus
-        ioPin.write(1);
+        ioPin->setDigitalValue(1);
     
         // Wait out rest of slot 
         waitOut(startTime, TIME_SLOT, finalYield);
@@ -317,10 +317,10 @@ namespace dstemp {
 
     /* 
      * Write a full byte
-     * @param ioPin the DigitalInOut pin to use.
+     * @param ioPin the MicroBitPin pin to use.
      * @param b the byte to send
      */
-    void writeByte(DigitalInOut& ioPin, uint8_t b, bool finalYield) {
+    void writeByte(MicroBitPin* ioPin, uint8_t b, bool finalYield) {
         for(int i=0;i<8;i++,b>>=1) {
             writeBit(ioPin, (b & 0x01), i!=7);
         }
@@ -328,18 +328,17 @@ namespace dstemp {
 
     /*
      * Read a single bit
-     * @param ioPin the DigitalInOut pin to read from
+     * @param ioPin the MicroBitPin pin to read from
      * @return true if the bit is a 1; false otherwise
      */
-    bool readBit(DigitalInOut& ioPin) {
+    bool readBit(MicroBitPin* ioPin) {
 
 #if DEBUG
         DigitalOut indicate(MICROBIT_PIN_P1);
         indicate.write(0);
 #endif 
         // Ensure recovery time
-        ioPin.output();
-        ioPin.write(1);
+        ioPin->setDigitalValue(1);
         wait_us(TIME_RECOV);
  
         // Start the transaction 
@@ -347,19 +346,16 @@ namespace dstemp {
 #if DEBUG       
         indicate.write(1);
 #endif 
-        ioPin.write(0);
-        ioPin.write(0);
-        ioPin.write(0);  // 2nd-3rd "writes" intentional to ensure >1uS LOW time. (Hand calibrated via scope to ~1.5uS)
-        //  wait for TIME_READ_START;
+        ioPin->setDigitalValue(0);
+        wait_us(TIME_READ_START);
 
         // Switch to input 
-        ioPin.input();
-        bool b = ioPin.read();
+        bool b = ioPin->getDigitalValue();
         wait_us(TIME_READ_OFFSET);
 
         // Sample:  Timing has been hand calibrated.  
         //           Tests indicate that sample occurs at ~14.2uS from low (~end of 15uS window spec)
-        b = (ioPin.read() == 1);
+        b = (ioPin->getDigitalValue() == 1);
 #if DEBUG       
         indicate.write(0);
 #endif 
@@ -368,8 +364,7 @@ namespace dstemp {
         waitOut(startTime, TIME_SLAVE_WRITE_END);
 
         // Switch back to output
-        ioPin.write(1);
-        ioPin.output(); 
+        ioPin->setDigitalValue(1);
 
         // Wait out rest of slot 
         waitOut(startTime, TIME_SLOT);
@@ -382,11 +377,11 @@ namespace dstemp {
 
     /* 
      *  Read the DS18B20 Temperature from Scratch pad and confirm success (via High/Low and CRC).
-     *  @param ioPin the DigitalInOut pin to use
+     *  @param ioPin the MicroBitPin pin to use
      *  @param temp the temperature (on success) or 
      */
     // Assumes configuration and HIGH/LOW set already.
-    bool readScratchpad(DigitalInOut& ioPin, float& temp) {
+    bool readScratchpad(MicroBitPin* ioPin, float& temp) {
         uint8_t data[9];
         int16_t value;
         uint8_t crc=0;
@@ -426,41 +421,39 @@ loopUntilSent(buffer);
      * @param ioPin the pin to use for the bus
      * @returns true if a device is detected on the bus following the reset; false otherwise
      */
-    bool reset(DigitalInOut& ioPin) {
+    bool reset(MicroBitPin* ioPin) {
         // Set pin to High (and get I/O object)
-        ioPin.output();
-        ioPin.write(1);
+        ioPin->setDigitalValue(1);
         wait_us(TIME_POWER_UP); // Possible power-up time
 
         // Set ioPin to output / apply reset signal
-        ioPin.output();
-        ioPin.write(0);
+        ioPin->setDigitalValue(0);
         wait_us(TIME_RESET_LOW);     // Wait for duration of reset pulse
 
         // Return pin to input for presence detection 
         // TODO: Review Trick below (scope)
         // Trick to improve absence detection when floating
-        ioPin.write(1);  
-        ioPin.input();
+        ioPin->setDigitalValue(1);  
+        (void)ioPin->getDigitalValue();  // Turn to input
         wait_us(TIME_POST_RESET_TO_DETECT);
 
         // Check for presence pulse
         unsigned long startTime = system_timer_current_time_us();
         bool presence = false;        
         do {
-            presence =  (ioPin.read() == 0);
+            presence =  (ioPin->getDigitalValue() == 0);
         } while ((presence == false) && (system_timer_current_time_us() - startTime < TIME_PRESENCE_DETECT));
 
         // If the pulse was present, wait for release
         bool release = false;
         if(presence) {
             do {
-                release = (ioPin.read() == 1);
+                release = (ioPin->getDigitalValue() == 1);
             } while((release==false) && (system_timer_current_time_us() - startTime < TIME_PRESENCE_DETECT));
         }
 
         // Write a 1 to avoid glitches on ROM command write
-        ioPin.write(1);
+        ioPin->setDigitalValue(1);
 
         // Success if the pin was pulled low and went high again
         bool success = presence && release;
@@ -565,7 +558,7 @@ loopUntilSent("\n");
 /*
     void setupioPin(int ioPin) {
         // Setup the ioPin (Phase 1)
-       // ioPin = new DigitalInOut(ioPin, PullUp, OpenDrain, 1);
+       // ioPin = new MicroBitPin(ioPin, PullUp, OpenDrain, 1);
 
     }
 
