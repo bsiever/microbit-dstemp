@@ -175,7 +175,7 @@ namespace dstemp {
         (void)mbp->getDigitalValue();
 
 #if DEBUG
-            loopUntilSent("Celsius Block\n");
+        loopUntilSent("Celsius Block\n");
 #endif
         bool success = false;
         // 1. Check for valid device, configure it for conversion, and start conversion
@@ -299,9 +299,6 @@ namespace dstemp {
         ioPin->setDigitalValue(1);
         wait_us(TIME_RECOV);
 
-#if DEBUG
-        loopUntilSent(one?"1":"0");
-#endif
         // Start bus transaction
         unsigned long startTime = system_timer_current_time_us();
         ioPin->setDigitalValue(0);
@@ -346,21 +343,31 @@ namespace dstemp {
         indicate->setDigitalValue(1);
 #endif 
         ioPin->setDigitalValue(0);
-        wait_us(TIME_READ_START);
+
+        // Not needed; Switching takes 1uS or more...
+        //wait_us(TIME_READ_START);
 
         // Switch to input 
-        bool b = ioPin->getDigitalValue();
-        wait_us(TIME_READ_OFFSET);
+        (void)ioPin->getDigitalValue();
+        // Check for a "0" 
+        bool b = true; 
+        while(system_timer_current_time_us() - startTime < TIME_SLAVE_WRITE_END) {
+            // If the bus goes low, its a 0
+            if(ioPin->getDigitalValue() == 0) {
+                b = false;
+            }
+        }
+        // wait_us(TIME_READ_OFFSET);
 
         // Sample:  Timing has been hand calibrated.  
         //           Tests indicate that sample occurs at ~14.2uS from low (~end of 15uS window spec)
-        b = (ioPin->getDigitalValue() == 1);
+        // b = (ioPin->getDigitalValue() == 1);
 #if DEBUG       
         indicate->setDigitalValue(0);
 #endif 
 
         // Wait out rest of slave access time 
-        waitOut(startTime, TIME_SLAVE_WRITE_END);
+        // waitOut(startTime, TIME_SLAVE_WRITE_END);
 
         // Switch back to output
         ioPin->setDigitalValue(1);
@@ -443,16 +450,23 @@ loopUntilSent(buffer);
             presence =  (ioPin->getDigitalValue() == 0);
         } while ((presence == false) && (system_timer_current_time_us() - startTime < TIME_PRESENCE_DETECT));
 
-        // If the pulse was present, wait for release
-        bool release = false;
-        if(presence) {
-            do {
-                release = (ioPin->getDigitalValue() == 1);
-            } while((release==false) && (system_timer_current_time_us() - startTime < TIME_PRESENCE_DETECT));
-        }
 
-        // Write a 1 to avoid glitches on ROM command write
+// THIS IS THE PROBLEM....THE RELEASE SEEMS TO TRIGGER A BIT / READ 
+      //  wait_us(25);
+        // Hold it down
         ioPin->setDigitalValue(0);
+        waitOut(startTime, TIME_PRESENCE_DETECT);
+        bool release = true;
+        // // If the pulse was present, wait for release
+        // bool release = false;
+        // if(presence) {
+        //     do {
+        //         release = (ioPin->getDigitalValue() == 1);
+        //     } while((release==false) && (system_timer_current_time_us() - startTime < TIME_PRESENCE_DETECT));
+        // }
+
+        // // Write a 1 to avoid glitches on ROM command write
+        ioPin->setDigitalValue(1);
 
         // Success if the pin was pulled low and went high again
         bool success = presence && release;
@@ -461,7 +475,7 @@ loopUntilSent(buffer);
         }
 
 #if DEBUG
-loopUntilSent("\n5 pres= ");
+loopUntilSent("\n B pres= ");
 loopUntilSent(presence);
 loopUntilSent(" relese= ");
 loopUntilSent(release);

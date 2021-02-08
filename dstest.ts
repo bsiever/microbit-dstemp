@@ -1,6 +1,6 @@
 serial.writeLine("starting...")
 basic.forever(function () {
-    serial.writeString("" + "loop\n")
+    serial.writeString("loop C\n")
     basic.pause(1000)
 })
 
