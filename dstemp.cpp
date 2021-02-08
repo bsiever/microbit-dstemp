@@ -168,15 +168,11 @@ namespace dstemp {
 
      //% 
     float celsius(int pin) {
-        // pin is a pin ID 
-
-// Pins?? PinName???  PinNumber??
         // Get corresponding I/O ioPin Object
         MicroBitPin *mbp = getPin(pin);
 
         // Set to input by default
         (void)mbp->getDigitalValue();
-        //MicroBitPin ioPin(mbp->name, PIN_INPUT, PullNone, 1);
 
 #if DEBUG
             loopUntilSent("Celsius Block\n");
@@ -223,9 +219,9 @@ namespace dstemp {
                 success = readScratchpad(mbp, temp);
 
                 if(success) {
-    #if DEBUG
+#if DEBUG
                     loopUntilSent("s");
-    #endif
+#endif
                     errorObjectIdx = 0;
                     errorPort = pin;
                     return temp;
@@ -303,6 +299,9 @@ namespace dstemp {
         ioPin->setDigitalValue(1);
         wait_us(TIME_RECOV);
 
+#if DEBUG
+        loopUntilSent(one?"1":"0");
+#endif
         // Start bus transaction
         unsigned long startTime = system_timer_current_time_us();
         ioPin->setDigitalValue(0);
@@ -453,7 +452,7 @@ loopUntilSent(buffer);
         }
 
         // Write a 1 to avoid glitches on ROM command write
-        ioPin->setDigitalValue(1);
+        ioPin->setDigitalValue(0);
 
         // Success if the pin was pulled low and went high again
         bool success = presence && release;
@@ -461,9 +460,8 @@ loopUntilSent(buffer);
             waitOut(startTime, TIME_RESET_HIGH);
         }
 
-
 #if DEBUG
-loopUntilSent("\npres= ");
+loopUntilSent("\n5 pres= ");
 loopUntilSent(presence);
 loopUntilSent(" relese= ");
 loopUntilSent(release);

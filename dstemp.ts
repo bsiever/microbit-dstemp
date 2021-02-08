@@ -1,4 +1,4 @@
-//% color=#0000FF 
+ //% color=#0000FF 
 //% icon="\uf2c8"
 //% block="DS Temp"
 namespace dstemp {
