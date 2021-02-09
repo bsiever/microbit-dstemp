@@ -25,38 +25,12 @@
 // DEBUG uses ioPin P1 to indicate sampling of read (for timing calibration)
 using namespace pxt;
 
-static float usPerIter = 0;
-static volatile int forceValue = 0;
-
-void calibrateTimer() {
-    if(usPerIter==0) {
-        usPerIter = 1;
-        uint64_t start = system_timer_current_time();
-        // Try 20,000 counts
-        wait_us(20000);
-        uint64_t stop = system_timer_current_time();
-        usPerIter = (stop-start)/20000.0;
-#if DEBUG
-
-        char buffer[24];
-        sprintf(buffer, "usPer: %f\n", usPerIter);
-        loopUntilSent(buffer);
-#endif
-   }
-}
-
-uint32_t wait_us(uint32_t delay) {
-    uint32_t count = delay*usPerIter;
-    while(count>0) {
-        forceValue++;
-        count--;
-    }
-    return 0;
-}
 
 namespace dstemp { 
 
     // ************* Forward Decalarations
+    void calibrateTimer(); // Calibrate the timer
+    void wait_us(uint32_t delay); // Wait the given time
     void loopUntilSent(ManagedString str);
     void loopUntilSent(int str);
     void waitOut(unsigned long start, unsigned long duration, bool yield = true);
@@ -101,6 +75,36 @@ namespace dstemp {
     int errorObjectIdx = 0;
     int errorPort = 0;
     Action errorHandler = NULL;
+
+
+
+
+    static float usPerIter = 0;
+    static volatile int forceValue = 0;
+
+    void calibrateTimer() {
+        if(usPerIter==0) {
+            usPerIter = 1;
+            uint64_t start = system_timer_current_time();
+            // Try 20,000 counts
+            wait_us(20000);
+            uint64_t stop = system_timer_current_time();
+            usPerIter = (stop-start)/20000.0;
+#if DEBUG
+            char buffer[24];
+            sprintf(buffer, "usPer: %f\n", usPerIter);
+            loopUntilSent(buffer);
+#endif
+        }
+    }
+
+    void wait_us(uint32_t delay) {
+        uint32_t count = delay*usPerIter;
+        while(count>0) {
+            forceValue++;
+            count--;
+        }
+    }
 
     // ************* Blocks 
 
