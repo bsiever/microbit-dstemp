@@ -397,23 +397,12 @@ return_error:
             maxCounts--;
         } while(maxCounts>0);
 
-        // wait_us(TIME_READ_OFFSET);
-
-        // Sample:  Timing has been hand calibrated.  
-        //           Tests indicate that sample occurs at ~14.2uS from low (~end of 15uS window spec)
-        // b = (ioPin->getDigitalValue() == 1);
 #if DEBUG       
         indicate->setDigitalValue(0);
 #endif 
-
-        // Wait out rest of slave access time 
-        // waitOut(startTime, TIME_SLAVE_WRITE_END);
-
         // Switch back to output
         ioPin->setDigitalValue(1);
 
-        // Wait out rest of slot 
-        waitOut(startTime, TIME_SLOT);
 #if DEBUG       
         indicate->setDigitalValue(0);
 #endif 
