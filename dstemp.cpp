@@ -80,26 +80,27 @@ namespace dstemp {
 
 
     static float usPerIter = 0;
-    static volatile int forceValue = 0;
+    static volatile uint32_t forceValue = 0;
 
     void calibrateTimer() {
         if(usPerIter==0) {
-            usPerIter = 1;
-            uint64_t start = system_timer_current_time();
-            // Try 20,000 counts
-            wait_us(20000);
-            uint64_t stop = system_timer_current_time();
-            usPerIter = (stop-start)/20000.0;
+            usPerIter = 1.0;
+            uint64_t start = system_timer_current_time_us();
+            // Try 100,000 counts
+            wait_us(100000);
+            uint64_t stop = system_timer_current_time_us();
+            uint32_t delta = (stop-start);
+            usPerIter = 100000.0/delta;
 #if DEBUG
             char buffer[24];
-            sprintf(buffer, "usPer: %f\n", usPerIter);
+            sprintf(buffer, "usPer: 100000/%d\n", delta);
             loopUntilSent(buffer);
 #endif
         }
     }
 
     void wait_us(uint32_t delay) {
-        uint32_t count = delay*usPerIter;
+        uint32_t count = (uint32_t)(delay*usPerIter);
         while(count>0) {
             forceValue++;
             count--;
@@ -199,6 +200,17 @@ namespace dstemp {
         // Get corresponding I/O ioPin Object
         MicroBitPin *mbp = getPin(pin);
 
+        mbp->setDigitalValue(0);
+        wait_us(10);
+        mbp->setDigitalValue(1);
+        wait_us(50);
+        mbp->setDigitalValue(0);
+        wait_us(100);
+        mbp->setDigitalValue(1);
+        wait_us(200);
+        mbp->setDigitalValue(0);
+        return 0;
+
         // Set to input by default
         (void)mbp->getDigitalValue();
 
@@ -211,7 +223,7 @@ namespace dstemp {
             // A. Configure Device
             if(configure(mbp)==false) {
                 error(1, pin);
-                return ERROR_SENTINEL;
+                goto return_error;
             }
             
             // B. Start conversion
@@ -224,7 +236,7 @@ namespace dstemp {
         // If unable to start conversion, return error
         if(success==false) {
             error(2, pin);
-            return ERROR_SENTINEL;
+            goto return_error;
         }
 
         // 2. Wait for conversion to complete 
@@ -252,6 +264,8 @@ namespace dstemp {
 #endif
                     errorObjectIdx = 0;
                     errorPort = pin;
+                    // Return to input
+                    (void)mbp->getDigitalValue();
                     return temp;
                 }
             }
@@ -260,6 +274,9 @@ namespace dstemp {
         // Call error Handler
         // TODO: Unify device code 
         error(3, pin);
+return_error:
+        // Return to input
+        (void)mbp->getDigitalValue();
         // Return special sentinel value
         return ERROR_SENTINEL;
     }
@@ -310,11 +327,10 @@ namespace dstemp {
         if(yield) 
           uBit.sleep(0);
 
-        // If there's any time left to wait, wait
-        int  waitTime = duration-(system_timer_current_time_us()-start);
-            if(waitTime>0) {
-                wait_us(waitTime);
-            }
+        // If there's any time left to wait
+        long  waitTime = duration-(system_timer_current_time_us()-start);
+        if(waitTime>0)
+            wait_us(waitTime);
     }
 
     /*
@@ -358,7 +374,7 @@ namespace dstemp {
     bool readBit(MicroBitPin* ioPin) {
 
 #if DEBUG
-        MicroBitPin* indicate = getPin(MICROBIT_PIN_P1);
+        MicroBitPin* indicate = &uBit.io.P1;
         indicate->setDigitalValue(0);
 #endif 
         // Ensure recovery time
@@ -477,9 +493,6 @@ loopUntilSent(buffer);
             presence =  (ioPin->getDigitalValue() == 0);
         } while ((presence == false) && (system_timer_current_time_us() - startTime < TIME_PRESENCE_DETECT));
 
-
-// THIS IS THE PROBLEM....THE RELEASE SEEMS TO TRIGGER A BIT / READ 
-      //  wait_us(25);
         // Hold it down
         ioPin->setDigitalValue(0);
         waitOut(startTime, TIME_PRESENCE_DETECT);
