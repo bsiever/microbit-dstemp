@@ -25,10 +25,31 @@
 // DEBUG uses ioPin P1 to indicate sampling of read (for timing calibration)
 using namespace pxt;
 
-uint64_t wait_us(uint64_t delay) {
-    uint64_t start = system_timer_current_time();
-    while(system_timer_current_time()-start < delay) {
-        // Intentionally empty;
+static float usPerIter = 0;
+static volatile int forceValue = 0;
+
+void calibrateTimer() {
+    if(usPerIter==0) {
+        usPerIter = 1;
+        uint64_t start = system_timer_current_time();
+        // Try 20,000 counts
+        wait_us(20000);
+        uint64_t stop = system_timer_current_time();
+        usPerIter = (stop-start)/20000.0;
+#if DEBUG
+
+        char buffer[24];
+        sprintf(buffer, "usPer: %f\n", usPerIter);
+        loopUntilSent(buffer);
+#endif
+   }
+}
+
+uint32_t wait_us(uint32_t delay) {
+    uint32_t count = delay*usPerIter;
+    while(count>0) {
+        forceValue++;
+        count--;
     }
     return 0;
 }
@@ -168,6 +189,9 @@ namespace dstemp {
 
      //% 
     float celsius(int pin) {
+        // Only needs to be done once, but done every call...
+        calibrateTimer();
+
         // Get corresponding I/O ioPin Object
         MicroBitPin *mbp = getPin(pin);
 
@@ -345,18 +369,17 @@ namespace dstemp {
         ioPin->setDigitalValue(0);
 
         // Not needed; Switching takes 1uS or more...
-        //wait_us(TIME_READ_START);
+        wait_us(TIME_READ_START);
 
-        // Switch to input 
-        (void)ioPin->getDigitalValue();
         // Check for a "0" 
         bool b = true; 
-        while(system_timer_current_time_us() - startTime < TIME_SLAVE_WRITE_END) {
+        do {
             // If the bus goes low, its a 0
             if(ioPin->getDigitalValue() == 0) {
                 b = false;
             }
-        }
+        } while(system_timer_current_time_us() - startTime < TIME_SLAVE_WRITE_END);
+
         // wait_us(TIME_READ_OFFSET);
 
         // Sample:  Timing has been hand calibrated.  
