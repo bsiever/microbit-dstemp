@@ -100,7 +100,9 @@ namespace dstemp {
     }
 
     void wait_us(uint32_t delay) {
-        uint32_t count = (uint32_t)(delay*usPerIter);
+        if(delay<=20)
+            return;
+        uint32_t count = (uint32_t)((delay-20)*usPerIter);
         while(count>0) {
             forceValue++;
             count--;
@@ -200,16 +202,16 @@ namespace dstemp {
         // Get corresponding I/O ioPin Object
         MicroBitPin *mbp = getPin(pin);
 
-        mbp->setDigitalValue(0);
-        wait_us(10);
-        mbp->setDigitalValue(1);
-        wait_us(50);
-        mbp->setDigitalValue(0);
-        wait_us(100);
-        mbp->setDigitalValue(1);
-        wait_us(200);
-        mbp->setDigitalValue(0);
-        return 0;
+        // mbp->setDigitalValue(0);
+        // wait_us(10);
+        // mbp->setDigitalValue(1);
+        // wait_us(50);
+        // mbp->setDigitalValue(0);
+        // wait_us(100);
+        // mbp->setDigitalValue(1);
+        // wait_us(200);
+        // mbp->setDigitalValue(0);
+        // return 0;
 
         // Set to input by default
         (void)mbp->getDigitalValue();
