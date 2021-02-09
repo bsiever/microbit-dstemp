@@ -384,23 +384,18 @@ return_error:
         wait_us(TIME_RECOV);
  
         // Start the transaction 
-        unsigned long startTime = system_timer_current_time_us();
-#if DEBUG       
-        indicate->setDigitalValue(1);
-#endif 
         ioPin->setDigitalValue(0);
-
-        // Not needed; Switching takes 1uS or more...
-        wait_us(TIME_READ_START);
 
         // Check for a "0" 
         bool b = true; 
+        uint32_t maxCounts = (int)(usPerIter * TIME_SLAVE_WRITE_END) + 1;
         do {
             // If the bus goes low, its a 0
             if(ioPin->getDigitalValue() == 0) {
                 b = false;
             }
-        } while(system_timer_current_time_us() - startTime < TIME_SLAVE_WRITE_END);
+            maxCounts--;
+        } while(maxCounts>0);
 
         // wait_us(TIME_READ_OFFSET);
 
