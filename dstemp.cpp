@@ -27,17 +27,18 @@ using namespace pxt;
 
 
 #if MICROBIT_CODAL
-    #ifdef NRF_P1
-        #define PORT (pin < 32 ? NRF_P0 : NRF_P1)
-        #define PIN ((pin) & 31)
-        #define NUM_PINS 48
-    #else
-        #define PORT (NRF_P0)
-        #define PIN (pin)
-        #define NUM_PINS 32
-    #endif
 
-    #define _wait_us(us)            system_timer_wait_cycles(11*us)
+#ifdef NRF_P1
+    #define PORT (pin < 32 ? NRF_P0 : NRF_P1)
+    #define PIN ((pin) & 31)
+    #define NUM_PINS 48
+#else
+    #define PORT (NRF_P0)
+    #define PIN (pin)
+    #define NUM_PINS 32
+#endif
+
+    #define _wait_us(us)            system_timer_wait_cycles(11*(us))
     #define _GPIO                   int
     static void setToInput(_GPIO pin)     { PORT->PIN_CNF[PIN] &= 0xfffffffc; }
     static void setToOutput(_GPIO pin)    { PORT->PIN_CNF[PIN] |= 3; }
@@ -54,12 +55,14 @@ using namespace pxt;
 
 
 #ifdef DEBUG
-    #if MICROBIT_CODAL
-            _GPIO indicatePin = uBit.io.P1.name;
-    #else
-            gpio_t indicateObj;
-            _GPIO indicatePin = &indicateObj;
-    #endif
+
+#if MICROBIT_CODAL
+        _GPIO indicatePin = uBit.io.P1.name;
+#else
+        gpio_t indicateObj;
+        _GPIO indicatePin = &indicateObj;
+#endif
+
 #endif
 
 namespace dstemp { 
@@ -427,7 +430,6 @@ return_error:
         // Time sensitive delay
         _wait_us(one ? TIME_ONE_LOW : TIME_ZERO_LOW);
         // Restore the bus
-        setPinValue(ioPin, 1);
         setToInput(ioPin);
         setPinValue(ioPin, 1);
     
@@ -490,7 +492,7 @@ return_error:
         setPinValue(indicatePin, 0);
 #endif 
 
-        return b;
+        return b; 
     }
 
     /* 
@@ -524,7 +526,7 @@ return_error:
         temp /= 16.0;
 #ifdef DEBUG 
         {
-        char buffer[24];
+        char buffer[40];
         sprintf(buffer, "data: %X %X %X %X %X %X %X %X %X\n", data[0],data[1],data[2],data[3],data[4],data[5],data[6],data[7],data[8]);
         loopUntilSent(buffer);
         sprintf(buffer, "crc: %X\n", crc);
