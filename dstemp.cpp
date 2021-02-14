@@ -26,39 +26,40 @@
 using namespace pxt;
 
 
-
-
-
 #if MICROBIT_CODAL
+    #ifdef NRF_P1
+        #define PORT (pin < 32 ? NRF_P0 : NRF_P1)
+        #define PIN ((pin) & 31)
+        #define NUM_PINS 48
+    #else
+        #define PORT (NRF_P0)
+        #define PIN (pin)
+        #define NUM_PINS 32
+    #endif
 
-    #define _wait_us(us)  target_wait_us(us)
-    #define _GPIO int
-    #define setToInput(pin)  ;
-    #define setToOutput(pin) ;
-    #define setPinValue(pin, val)  ;
-    #define getPinValue(pin)    (1)
-
+    #define _wait_us(us)            system_timer_wait_cycles(11*us)
+    #define _GPIO                   int
+    static void setToInput(_GPIO pin)     { PORT->PIN_CNF[PIN] &= 0xfffffffc; }
+    static void setToOutput(_GPIO pin)    { PORT->PIN_CNF[PIN] |= 3; }
+    static void setPinValue(_GPIO pin, int val) { if (val) PORT->OUTSET = 1 << PIN; else PORT->OUTCLR = 1 << PIN;}
+    static bool getPinValue(_GPIO pin)    { return (PORT->IN & (1 << PIN)) ? 1 : 0; }
 #else
-
     #define _wait_us(us)            wait_us(((us)>5)?(us)-5:0)
     #define _GPIO                   gpio_t*
-    #define setToInput(pin)         gpio_dir(pin, PIN_INPUT)
-    #define setToOutput(pin)        gpio_dir(pin, PIN_OUTPUT)
-    #define setPinValue(pin, val)   gpio_write(pin, val)
-    #define getPinValue(pin)        gpio_read(pin)
-
+    #define setToInput(pin)         gpio_dir((pin), PIN_INPUT)
+    #define setToOutput(pin)        gpio_dir((pin), PIN_OUTPUT)
+    #define setPinValue(pin, val)   gpio_write((pin), (val))
+    #define getPinValue(pin)        gpio_read((pin))
 #endif
 
 
 #ifdef DEBUG
-
-#if MICROBIT_CODAL
-        _GPIO indicatePin = 0;
-#else
-        gpio_t indicateObj;
-        _GPIO indicatePin = &indicateObj;
-#endif
-
+    #if MICROBIT_CODAL
+            _GPIO indicatePin = uBit.io.P1.name;
+    #else
+            gpio_t indicateObj;
+            _GPIO indicatePin = &indicateObj;
+    #endif
 #endif
 
 namespace dstemp { 
@@ -95,7 +96,6 @@ namespace dstemp {
 
     const int TIME_CONVERSION = 760; // Conversion Time = 750mS T_CONV (rounded up)
 
-    // TODO: Consider NaN here instead??
     const float ERROR_SENTINEL = -INFINITY;  // Sentinel value to return for errors. 
 
     const int HIGH_ALARM = 0xFF;  // High Alarm Value  (both set and confirmed; Should be non-zero)
@@ -104,7 +104,6 @@ namespace dstemp {
     const int MAX_TRIES = 3;      // Max tries to attempt conversion before fail 
 
     // ************* State variables 
-    // TODO: Can these be "shared", like functions
     int errorObjectIdx = 0;
     int errorPort = 0;
     Action errorHandler = NULL;
@@ -129,20 +128,9 @@ namespace dstemp {
      * It will set error values and immediately call the handler (i.e., no race condition should occur) 
      */
     void error(int objIndex, int port) {
-#if DEBUG
-        loopUntilSent("err C\n"); 
-#endif
-        // TODO: Sharing variables in this way is risky.
-        //       Race conditions could occur (not likely in current design though
-        //       error handler is called immediately)
         errorObjectIdx = objIndex;
-        // TODO: Find better approach to reverse pin mapping (from mbed pin ID back to microbit pins)
-        //       This approach works for P0-P20 since pins IDs are contiguous from 0-20
         errorPort = port - MICROBIT_ID_IO_P0;
         if(errorHandler) {
-#if DEBUG
-        loopUntilSent("calling handler\n"); 
-#endif
             pxt::runAction0(errorHandler);            
         }
     }
@@ -153,12 +141,6 @@ namespace dstemp {
      */
     bool configure(_GPIO ioPin) {
         if(resetAndCheckPresence(ioPin) == false) {
-#if DEBUG
-            loopUntilSent("No Device Present\n");
-#endif
-            // Call error Handler
-            // TODO: Unify device code
-           
             return false;
         }
         // Write ROM command: Skip ROM Command CCh: To address all devices
@@ -202,8 +184,7 @@ namespace dstemp {
         // Get corresponding I/O ioPin Object
         MicroBitPin *mbp = getPin(pin);  // This returns a "uBit.io.P0" type thing
 #if MICROBIT_CODAL
-        PinNumber pinNumber = mbp->name;
-        _GPIO gpio = 0;
+        _GPIO gpio = mbp->name;
 #else
         gpio_t gpioObj;
         _GPIO gpio = &gpioObj;
@@ -211,9 +192,9 @@ namespace dstemp {
 #endif
  
 #ifdef DEBUG
-    MicroBitPin* indicate = &uBit.io.P1;
 #if MICROBIT_CODAL
 #else
+    MicroBitPin* indicate = &uBit.io.P1;
     gpio_init(indicatePin, indicate->name);
 #endif
 
@@ -222,10 +203,15 @@ namespace dstemp {
 #endif
 
 
+#ifdef DEBUG
 #if 0
 {
     // Misc tests.
-
+#if MICROBIT_CODAL 
+    loopUntilSent("CODAL");
+#else
+    loopUntilSent("DAL");
+#endif
     // Setup
     setPinValue(gpio, 1);
     setToOutput(gpio);
@@ -239,15 +225,15 @@ namespace dstemp {
     setPinValue(gpio, 1);
     _wait_us(200);
     setPinValue(gpio, 0);
-    _wait_us(400);
+    _wait_us(1000);
     setPinValue(gpio, 1);
 
-
     // Calibrate input loop
-    // v1: 341 uS for 200 iterations; 1.705/iteration
+    // v1: 341 uS for 200 iterations; 1.705uS/iteration
+    // v2: 142.25 uS for 2000 iterations ; 0.071125uS/ iteration
     setPinValue(indicatePin, 0);
     setToInput(gpio);
-    uint32_t maxCounts =  200;
+    uint32_t maxCounts =  2000;
     bool b = true;
     do {
         // If the bus goes low, its a 0
@@ -260,7 +246,8 @@ namespace dstemp {
     setPinValue(indicatePin, 0);
 
     // v1: 341 uS for 200 iterations; 1.705 uS/Iteration
-    maxCounts = 200;
+    // v2: 110.625 for 2000 iterasions ; 0.0553125uS/iter
+    maxCounts = 2000;
     setToInput(gpio);
     // Check for presence pulse
     bool presence = false;        
@@ -270,9 +257,11 @@ namespace dstemp {
     setPinValue(indicatePin, 1);
    
     _wait_us(200);
-    setPinValue(indicatePin, 0);
     // v1: Aim for exactly 200uS
-    maxCounts = (int)(200/1.705);
+    //maxCounts = (int)(200/1.705);
+    // v2: Aim for exactly 200uS
+    maxCounts = (int)(200/0.05);
+    setPinValue(indicatePin, 0);
     setToInput(gpio);
     // Check for presence pulse
     presence = false;        
@@ -285,22 +274,20 @@ namespace dstemp {
 }
     return 0;
 #endif 
-
-
-
-
-
-
-#if DEBUG 
-{
-char buffer[24];
-sprintf(buffer, "pin: %d\n", mbp->name);
-loopUntilSent(buffer);
-}
 #endif 
 
-#if DEBUG
+
+
+
+
+
+#ifdef DEBUG 
+        {
+        char buffer[24];
+        sprintf(buffer, "pin: %d\n", mbp->name);
+        loopUntilSent(buffer);
         loopUntilSent("Celsius Block\n");
+        }
 #endif
         bool success = false;
         // 1. Check for valid device, configure it for conversion, and start conversion
@@ -335,6 +322,7 @@ loopUntilSent(buffer);
                 uBit.sleep(0);
             }
         }
+        // If not successful, error
         if(success==false) {
             error(4, pin);
             goto return_error;
@@ -353,9 +341,6 @@ loopUntilSent(buffer);
                 success = readScratchpad(gpio, temp);
 
                 if(success) {
-#if DEBUG
-                    loopUntilSent("s");
-#endif
                     errorObjectIdx = 0;
                     errorPort = pin;
                     // Return to input
@@ -365,8 +350,6 @@ loopUntilSent(buffer);
             }
         } 
         // ERROR: Max Read Tries 
-        // Call error Handler
-        // TODO: Unify device code 
         error(3, pin);
 return_error:
         // Return to input
@@ -387,7 +370,7 @@ return_error:
 
     // ************* Helper Functions 
   
-#if DEBUG
+#ifdef DEBUG
     /**
      * 
      */
@@ -439,16 +422,17 @@ return_error:
         _wait_us(TIME_RECOV);
 
         // Start bus transaction
-        unsigned long startTime = system_timer_current_time_us();
+ //       unsigned long startTime = system_timer_current_time_us();
         setPinValue(ioPin, 0);
         // Time sensitive delay
         _wait_us(one ? TIME_ONE_LOW : TIME_ZERO_LOW);
         // Restore the bus
+        setPinValue(ioPin, 1);
         setToInput(ioPin);
         setPinValue(ioPin, 1);
     
         // Wait out rest of slot 
-        waitOut(startTime, TIME_SLOT, finalYield);
+        _wait_us(one ? TIME_SLOT : 0);
     }
 
     /* 
@@ -488,7 +472,7 @@ return_error:
 
         // Sample for ~70uS after releasing 
 #if MICROBIT_CODAL
-        uint32_t maxCounts = 25;
+        uint32_t maxCounts = (int)(TIME_SLOT/0.07);
 #else
         // v1: 115 uS for 200 iterations; 0.575uS/iteration
         _wait_us(0);  // Wait for ~6uS
@@ -538,14 +522,14 @@ return_error:
         value |= data[0];
         temp = value;
         temp /= 16.0;
-#if DEBUG 
-{
-char buffer[24];
-sprintf(buffer, "data: %X %X %X %X %X %X %X %X %X\n", data[0],data[1],data[2],data[3],data[4],data[5],data[6],data[7],data[8]);
-loopUntilSent(buffer);
-sprintf(buffer, "crc: %X\n", crc);
-loopUntilSent(buffer);
-}
+#ifdef DEBUG 
+        {
+        char buffer[24];
+        sprintf(buffer, "data: %X %X %X %X %X %X %X %X %X\n", data[0],data[1],data[2],data[3],data[4],data[5],data[6],data[7],data[8]);
+        loopUntilSent(buffer);
+        sprintf(buffer, "crc: %X\n", crc);
+        loopUntilSent(buffer);
+        }
 #endif 
         return crc==0 && data[2]==HIGH_ALARM && data[3]==LOW_ALARM;
     }
@@ -574,7 +558,7 @@ loopUntilSent(buffer);
         _wait_us(TIME_POST_RESET_TO_DETECT);
 
 #if MICROBIT_CODAL
-        int maxCounts = TIME_PRESENCE_DETECT;   // Hand tuned values...Full presence period sample
+        int maxCounts = (int)(TIME_PRESENCE_DETECT/0.05);   // Hand tuned values...Full presence period sample
 #else 
         // v1: 1.705 uS/Iteration
         int maxCounts = (int)(TIME_PRESENCE_DETECT/0.584);
@@ -598,12 +582,12 @@ loopUntilSent(buffer);
         // Success if the pin was pulled low and went high again
         bool success = presence && release;
 
-#if DEBUG
-loopUntilSent("\n B pres= ");
-loopUntilSent(presence);
-loopUntilSent(" relese= ");
-loopUntilSent(release);
-loopUntilSent("\n");
+#ifdef DEBUG
+        loopUntilSent("\npres= ");
+        loopUntilSent(presence);
+        loopUntilSent(" relese= ");
+        loopUntilSent(release);
+        loopUntilSent("\n");
 #endif 
         return success; // Return success or failure
     }
