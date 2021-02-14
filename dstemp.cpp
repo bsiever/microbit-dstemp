@@ -26,9 +26,8 @@
 using namespace pxt;
 
 
-#if MICROBIT_CODAL
-#else
-#endif
+
+
 
 #if MICROBIT_CODAL
 
@@ -41,12 +40,24 @@ using namespace pxt;
 
 #else
 
-    #define _wait_us(us)            wait_us(us-5)
+    #define _wait_us(us)            wait_us(((us)>5)?(us)-5:0)
     #define _GPIO                   gpio_t*
     #define setToInput(pin)         gpio_dir(pin, PIN_INPUT)
     #define setToOutput(pin)        gpio_dir(pin, PIN_OUTPUT)
     #define setPinValue(pin, val)   gpio_write(pin, val)
     #define getPinValue(pin)        gpio_read(pin)
+
+#endif
+
+
+#ifdef DEBUG
+
+#if MICROBIT_CODAL
+        _GPIO indicatePin = 0;
+#else
+        gpio_t indicateObj;
+        _GPIO indicatePin = &indicateObj;
+#endif
 
 #endif
 
@@ -199,23 +210,20 @@ namespace dstemp {
         gpio_init(gpio, mbp->name);
 #endif
  
-
-
-#if 1
-
+#ifdef DEBUG
     MicroBitPin* indicate = &uBit.io.P1;
-
 #if MICROBIT_CODAL
-        _GPIO indicatePin = 0;
 #else
-        gpio_t indicateObj;
-        _GPIO indicatePin = &indicateObj;
-        gpio_init(indicatePin, indicate->name);
-        setToOutput(indicatePin);
+    gpio_init(indicatePin, indicate->name);
 #endif
 
-    // Output timing tests (calibrate _wait_us())
+    setToOutput(indicatePin);
+    setPinValue(indicatePin, 0);
+#endif
 
+
+#if 0
+{
     // Misc tests.
 
     // Setup
@@ -274,7 +282,7 @@ namespace dstemp {
     setPinValue(indicatePin, 1);
    
     setToOutput(gpio);
-
+}
     return 0;
 #endif 
 
@@ -317,11 +325,20 @@ loopUntilSent(buffer);
         }
 
         // 2. Wait for conversion to complete 
-        while(readBit(gpio) == 0) {
-            // Wait for conversion to complete. 
-            uBit.sleep(0);
+        success = false;
+        for(int maxIterations = 1500000/TIME_SLOT; maxIterations>0; maxIterations--) {
+            if(readBit(gpio) == 0) {
+                success = true;
+                break;
+            } else {
+                // Wait for conversion to complete. 
+                uBit.sleep(0);
+            }
         }
-     //   uBit.sleep(TIME_CONVERSION); // let other tasks run
+        if(success==false) {
+            error(4, pin);
+            goto return_error;
+        }
 
         // 3. Retrieve Data 
         for(int tries=0;tries<MAX_TRIES;tries++) {
@@ -418,6 +435,7 @@ return_error:
     void writeBit(_GPIO ioPin, bool one, bool finalYield) {
         // Ensure recovery time
         setPinValue(ioPin, 1);
+        setToOutput(ioPin);
         _wait_us(TIME_RECOV);
 
         // Start bus transaction
@@ -426,7 +444,7 @@ return_error:
         // Time sensitive delay
         _wait_us(one ? TIME_ONE_LOW : TIME_ZERO_LOW);
         // Restore the bus
-        setToOutput(ioPin);
+        setToInput(ioPin);
         setPinValue(ioPin, 1);
     
         // Wait out rest of slot 
@@ -450,20 +468,6 @@ return_error:
      * @return true if the bit is a 1; false otherwise
      */
     bool readBit(_GPIO ioPin) {
-
-#if DEBUG
-    MicroBitPin* indicate = &uBit.io.P1;
-
-#if MICROBIT_CODAL
-        _GPIO indicatePin = 0;
-#else
-        gpio_t indicateObj;
-        _GPIO indicatePin = &indicateObj;
-        gpio_init(indicatePin, indicate->name);
-        setToOutput(indicatePin);
-#endif
-        setPinValue(indicatePin, 0);
-#endif 
         // Ensure recovery time
         setToOutput(ioPin);
         setPinValue(ioPin,1);
@@ -471,11 +475,16 @@ return_error:
  
         // Start the transaction 
         setPinValue(ioPin, 0);
-
-        setToInput(ioPin);
+        _wait_us(0);
         setPinValue(ioPin, 1);
+        setToInput(ioPin);
+
         // Start high (default) 
         bool b = true; 
+
+#ifdef DEBUG       
+        setPinValue(indicatePin, 1);
+#endif 
 
         // Sample for ~70uS after releasing 
 #if MICROBIT_CODAL
@@ -483,20 +492,17 @@ return_error:
 #else
         // v1: 115 uS for 200 iterations; 0.575uS/iteration
         _wait_us(0);  // Wait for ~6uS
-        uint32_t maxCounts = (int)(TIME_SLOT/1.705);
+        uint32_t maxCounts = (int)(TIME_SLOT/0.575);
 #endif
         do {
             // If the bus goes low, its a 0
             b = b && getPinValue(ioPin);
         } while(maxCounts-->0);
 
-#if DEBUG       
-        setPinValue(indicatePin, 0);
-#endif 
         // Switch back to output
         setPinValue(ioPin,1);
 
-#if DEBUG       
+#ifdef DEBUG       
         setPinValue(indicatePin, 0);
 #endif 
 
@@ -567,23 +573,27 @@ loopUntilSent(buffer);
         setPinValue(ioPin, 1);
         _wait_us(TIME_POST_RESET_TO_DETECT);
 
-
-// TODO:  Update this based on CODAL vs DAL
 #if MICROBIT_CODAL
-        int maxCounts = 14;   // Hand tuned values...Full presence period sample
+        int maxCounts = TIME_PRESENCE_DETECT;   // Hand tuned values...Full presence period sample
 #else 
-        // v1: 165 uS for 200 iterations; 0.825 uS/Iteration
-        int maxCounts = (int)(TIME_PRESENCE_DETECT/1.705);
+        // v1: 1.705 uS/Iteration
+        int maxCounts = (int)(TIME_PRESENCE_DETECT/0.584);
 #endif
 
-        // Check for presence pulse
+        // Check for presence pulse (pulling line low)
+#ifdef DEBUG
+        setPinValue(indicatePin,1);
+#endif
         bool presence = false;        
         do {
             presence =  presence || (getPinValue(ioPin) == 0);
         } while (maxCounts-- > 0);
 
         // Confirm that it's released
-        bool release = getPinValue(ioPin);
+#ifdef DEBUG
+        setPinValue(indicatePin,0);
+#endif
+        bool release = getPinValue(ioPin)==1;
 
         // Success if the pin was pulled low and went high again
         bool success = presence && release;

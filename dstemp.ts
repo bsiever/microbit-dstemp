@@ -13,7 +13,7 @@ namespace dstemp {
 
     // TODO: Are these in ROM?  Is there a way to unify with C-Code constants
     // TODO: Localization
-    const errorMsgs  = [ "No Error", "Not Connected", "Start Error", "Read Timeout"];
+    const errorMsgs  = [ "No Error", "Not Connected", "Start Error", "Read Timeout", "Conversion Failure"];
 
     //% blockId="celsius" block="Temp. in Celsius on %pin|"
     //% shim=dstemp::celsius
