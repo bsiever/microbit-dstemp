@@ -20,8 +20,7 @@
 #include "nrf.h"
 #include "MicroBitSystemTimer.h"
 
-
-#define DEBUG 1
+//#define DEBUG 1
 // DEBUG uses ioPin P1 to indicate sampling of read (for timing calibration)
 using namespace pxt;
 
@@ -232,7 +231,7 @@ namespace dstemp {
     setPinValue(gpio, 1);
 
     // Calibrate input loop
-    // v1: 341 uS for 200 iterations; 1.705uS/iteration
+    // v1: 1147 uS for 2000 iterations; 0.5735/iteration
     // v2: 142.25 uS for 2000 iterations ; 0.071125uS/ iteration
     setPinValue(indicatePin, 0);
     setToInput(gpio);
@@ -248,7 +247,7 @@ namespace dstemp {
 
     setPinValue(indicatePin, 0);
 
-    // v1: 341 uS for 200 iterations; 1.705 uS/Iteration
+    // v1: 3551 uS for 2000 iterations; 1.775 uS/Iteration
     // v2: 110.625 for 2000 iterasions ; 0.0553125uS/iter
     maxCounts = 2000;
     setToInput(gpio);
@@ -261,9 +260,9 @@ namespace dstemp {
    
     _wait_us(200);
     // v1: Aim for exactly 200uS
-    //maxCounts = (int)(200/1.705);
+    //maxCounts = (int)(200/1.775);
     // v2: Aim for exactly 200uS
-    maxCounts = (int)(200/0.05);
+    maxCounts = (int)(200/1.7);
     setPinValue(indicatePin, 0);
     setToInput(gpio);
     // Check for presence pulse
@@ -278,10 +277,6 @@ namespace dstemp {
     return 0;
 #endif 
 #endif 
-
-
-
-
 
 
 #ifdef DEBUG 
@@ -316,7 +311,7 @@ namespace dstemp {
 
         // 2. Wait for conversion to complete 
         success = false;
-        for(int maxIterations = 1500000/TIME_SLOT; maxIterations>0; maxIterations--) {
+        for(int maxIterations = 20; maxIterations>0; maxIterations--) {
             if(readBit(gpio) == 0) {
                 success = true;
                 break;
@@ -478,7 +473,7 @@ return_error:
 #else
         // v1: 115 uS for 200 iterations; 0.575uS/iteration
         _wait_us(0);  // Wait for ~6uS
-        uint32_t maxCounts = (int)(TIME_SLOT/0.575);
+        uint32_t maxCounts = (int)(TIME_SLOT/0.57);
 #endif
         do {
             // If the bus goes low, its a 0
@@ -552,18 +547,15 @@ return_error:
         _wait_us(TIME_RESET_LOW);     // Wait for duration of reset pulse
 
         // Return pin to input for presence detection 
-        // TODO: Review Trick below (scope)
-        // Trick to improve absence detection when floating
-
-        setToInput(ioPin);
         setPinValue(ioPin, 1);
+        setToInput(ioPin);
         _wait_us(TIME_POST_RESET_TO_DETECT);
 
 #if MICROBIT_CODAL
         int maxCounts = (int)(TIME_PRESENCE_DETECT/0.05);   // Hand tuned values...Full presence period sample
 #else 
         // v1: 1.705 uS/Iteration
-        int maxCounts = (int)(TIME_PRESENCE_DETECT/0.584);
+        int maxCounts = (int)(TIME_PRESENCE_DETECT/1);
 #endif
 
         // Check for presence pulse (pulling line low)

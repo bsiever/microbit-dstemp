@@ -1,11 +1,11 @@
 serial.writeLine("starting...")
-basic.forever(function () {
-    serial.writeString("loop\n")
-    basic.pause(1000)
-})
+// basic.forever(function () {
+//     serial.writeString("loop\n")
+//     basic.pause(1000)
+// })
 
 input.onButtonPressed(Button.A, function () {
-    serial.writeString("Cvt: ")
+    serial.writeString("temp = ")
     serial.writeNumber(dstemp.celsius(DigitalPin.P0))
     serial.writeString("\n")
 //      basic.showNumber(dstemp.celsius(DigitalPin.P0))
