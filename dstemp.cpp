@@ -27,47 +27,6 @@ using namespace pxt;
 
 #if MICROBIT_CODAL
 
-// //From: https://github.com/ARMmbed/nrf51-sdk/blob/master/source/nordic_sdk/components/drivers_nrf/delay/nrf_delay.h
-// static void __INLINE nrf_delay_us(uint32_t volatile number_of_us) __attribute__((always_inline));
-// static void __INLINE nrf_delay_us(uint32_t volatile number_of_us)
-// {
-// register uint32_t delay __ASM ("r0") = number_of_us;
-// __ASM volatile (
-//     ".syntax unified\n"
-//     "1:\n"
-//     " SUBS %0, %0, #1\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"   
-//     " NOP\n"  
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"   
-//     " NOP\n"  
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " NOP\n"
-//     " BNE 1b\n"
-//     ".syntax divided\n"
-//     : "+r" (delay));
-// }
-
 #ifdef NRF_P1
     #define PORT (pin < 32 ? NRF_P0 : NRF_P1)
     #define PIN ((pin) & 31)
@@ -79,10 +38,6 @@ using namespace pxt;
 #endif
 
     #define _wait_us(us)          system_timer_wait_cycles((us)==0? 1: 10*(us)) 
-    //system_timer_wait_us(us)
-    //system_timer_wait_cycles(11*(us))
-    // nrf_delay_us(2*(us)) 
-    //system_timer_wait_cycles(11*(us))
     #define _GPIO                   int
     static void setToInput(_GPIO pin)     { PORT->PIN_CNF[PIN] &= 0xfffffffc; }
     static void setToOutput(_GPIO pin)    { PORT->PIN_CNF[PIN] |= 3; }
