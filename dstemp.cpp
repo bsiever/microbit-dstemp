@@ -27,6 +27,47 @@ using namespace pxt;
 
 #if MICROBIT_CODAL
 
+// //From: https://github.com/ARMmbed/nrf51-sdk/blob/master/source/nordic_sdk/components/drivers_nrf/delay/nrf_delay.h
+// static void __INLINE nrf_delay_us(uint32_t volatile number_of_us) __attribute__((always_inline));
+// static void __INLINE nrf_delay_us(uint32_t volatile number_of_us)
+// {
+// register uint32_t delay __ASM ("r0") = number_of_us;
+// __ASM volatile (
+//     ".syntax unified\n"
+//     "1:\n"
+//     " SUBS %0, %0, #1\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"   
+//     " NOP\n"  
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"   
+//     " NOP\n"  
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " NOP\n"
+//     " BNE 1b\n"
+//     ".syntax divided\n"
+//     : "+r" (delay));
+// }
+
 #ifdef NRF_P1
     #define PORT (pin < 32 ? NRF_P0 : NRF_P1)
     #define PIN ((pin) & 31)
@@ -37,12 +78,40 @@ using namespace pxt;
     #define NUM_PINS 32
 #endif
 
-    #define _wait_us(us)            system_timer_wait_cycles(11*(us))
+    #define _wait_us(us)          system_timer_wait_cycles((us)==0? 1: 10*(us)) 
+    //system_timer_wait_us(us)
+    //system_timer_wait_cycles(11*(us))
+    // nrf_delay_us(2*(us)) 
+    //system_timer_wait_cycles(11*(us))
     #define _GPIO                   int
     static void setToInput(_GPIO pin)     { PORT->PIN_CNF[PIN] &= 0xfffffffc; }
     static void setToOutput(_GPIO pin)    { PORT->PIN_CNF[PIN] |= 3; }
     static void setPinValue(_GPIO pin, int val) { if (val) PORT->OUTSET = 1 << PIN; else PORT->OUTCLR = 1 << PIN;}
     static bool getPinValue(_GPIO pin)    { return (PORT->IN & (1 << PIN)) ? 1 : 0; }
+
+    static void configTimer() {
+
+        static NRF_TIMER_Type *timer = NULL;
+
+        // If we haven't gotten the timer yet, do startup tasks, including getting the timer.
+        if(timer == NULL) {
+            NVIC_DisableIRQ(TIMER1_IRQn);
+            // Ensure the HFCLOCK is running
+            NRF_CLOCK_Type *clock = NRF_CLOCK;
+            clock->TASKS_HFCLKSTART = 1;
+
+            // Get the timer (ensures this is only done once)
+            timer = NRF_TIMER1;
+            // Disable timer
+            timer->TASKS_STOP = 1;
+            // Set bit mode
+            timer->BITMODE = 3;
+            // Restart it
+            timer->TASKS_START = 1;
+            NVIC_EnableIRQ(TIMER1_IRQn);
+        }
+    }
+
 #else
     #define _wait_us(us)            wait_us(((us)>5)?(us)-5:0)
     #define _GPIO                   gpio_t*
@@ -179,10 +248,82 @@ namespace dstemp {
         return readBit(ioPin)==0;
     }
 
+
+#ifdef DEBUG
+    void calibrate(_GPIO gpio) {
+        // Misc tests.
+#if MICROBIT_CODAL 
+        loopUntilSent("CODAL");
+#else
+        loopUntilSent("DAL");
+#endif
+        // Setup
+        setPinValue(gpio, 1);
+        setToOutput(gpio);
+        setPinValue(indicatePin, 1);
+        setToOutput(indicatePin);
+
+        setPinValue(gpio, 1);
+        _wait_us(100);
+        setPinValue(gpio, 0);
+        _wait_us(100);
+        setPinValue(gpio, 1);
+        _wait_us(200);
+        setPinValue(gpio, 0);
+        _wait_us(1000);
+        setPinValue(gpio, 1);
+
+        // Calibrate input loop
+        // v1: 1147 uS for 2000 iterations; 0.5735/iteration
+        // v2: 127 uS for 2000 iterations ; 0.0635uS/ iteration
+        setPinValue(indicatePin, 0);
+        setToInput(gpio);
+        uint32_t maxCounts =  2000;
+        bool b = true;
+        do {
+            // If the bus goes low, its a 0
+            b = b && getPinValue(gpio);
+        } while(maxCounts-- > 0);
+        setPinValue(indicatePin, 1);
+        _wait_us(100);
+
+
+        setPinValue(indicatePin, 0);
+
+        // v1: 3551 uS for 2000 iterations; 1.775 uS/Iteration
+        // v2: 346 for 2000 iterations ; 0.173uS/iter
+        maxCounts = 2000;
+        setToInput(gpio);
+        // Check for presence pulse
+        bool presence = false;        
+        do {
+            presence = presence || (getPinValue(gpio) == 0);
+        } while (maxCounts-- > 0);
+        setPinValue(indicatePin, 1);
+    
+        _wait_us(200);
+        // v1: Aim for exactly 200uS
+        //maxCounts = (int)(200/1.775);
+        // v2: Aim for exactly 200uS
+        maxCounts = (int)(200/0.173);
+        setPinValue(indicatePin, 0);
+        setToInput(gpio);
+        // Check for presence pulse
+        presence = false;        
+        do {
+            presence = presence || (getPinValue(gpio) == 0);
+        } while (maxCounts-- > 0);
+        setPinValue(indicatePin, 1);
+    
+        setToOutput(gpio);
+    }
+#endif
      //% 
     float celsius(int pin) {
         // Only needs to be done once, but done every call...
-
+#if MICROBIT_CODAL
+        configTimer();
+#endif
         // Get corresponding I/O ioPin Object
         MicroBitPin *mbp = getPin(pin);  // This returns a "uBit.io.P0" type thing
 #if MICROBIT_CODAL
@@ -206,76 +347,8 @@ namespace dstemp {
 
 
 #ifdef DEBUG
-#if 0
-{
-    // Misc tests.
-#if MICROBIT_CODAL 
-    loopUntilSent("CODAL");
-#else
-    loopUntilSent("DAL");
-#endif
-    // Setup
-    setPinValue(gpio, 1);
-    setToOutput(gpio);
-    setPinValue(indicatePin, 1);
-    setToOutput(indicatePin);
-
-    setPinValue(gpio, 1);
-    _wait_us(100);
-    setPinValue(gpio, 0);
-    _wait_us(100);
-    setPinValue(gpio, 1);
-    _wait_us(200);
-    setPinValue(gpio, 0);
-    _wait_us(1000);
-    setPinValue(gpio, 1);
-
-    // Calibrate input loop
-    // v1: 1147 uS for 2000 iterations; 0.5735/iteration
-    // v2: 142.25 uS for 2000 iterations ; 0.071125uS/ iteration
-    setPinValue(indicatePin, 0);
-    setToInput(gpio);
-    uint32_t maxCounts =  2000;
-    bool b = true;
-    do {
-        // If the bus goes low, its a 0
-        b = b && getPinValue(gpio);
-    } while(maxCounts-- > 0);
-    setPinValue(indicatePin, 1);
-    _wait_us(100);
-
-
-    setPinValue(indicatePin, 0);
-
-    // v1: 3551 uS for 2000 iterations; 1.775 uS/Iteration
-    // v2: 110.625 for 2000 iterasions ; 0.0553125uS/iter
-    maxCounts = 2000;
-    setToInput(gpio);
-    // Check for presence pulse
-    bool presence = false;        
-    do {
-        presence =  presence || (getPinValue(gpio) == 0);
-    } while (maxCounts-- > 0);
-    setPinValue(indicatePin, 1);
-   
-    _wait_us(200);
-    // v1: Aim for exactly 200uS
-    //maxCounts = (int)(200/1.775);
-    // v2: Aim for exactly 200uS
-    maxCounts = (int)(200/1.7);
-    setPinValue(indicatePin, 0);
-    setToInput(gpio);
-    // Check for presence pulse
-    presence = false;        
-    do {
-        presence =  presence || (getPinValue(gpio) == 0);
-    } while (maxCounts-- > 0);
-    setPinValue(indicatePin, 1);
-   
-    setToOutput(gpio);
-}
-    return 0;
-#endif 
+    // calibrate(gpio);
+    // return 0;
 #endif 
 
 
@@ -429,7 +502,7 @@ return_error:
         setPinValue(ioPin, 1);
     
         // Wait out rest of slot 
-        _wait_us(one ? TIME_SLOT : 0);
+        _wait_us(one ? TIME_SLOT : 1);
     }
 
     /* 
@@ -469,7 +542,8 @@ return_error:
 
         // Sample for ~70uS after releasing 
 #if MICROBIT_CODAL
-        uint32_t maxCounts = (int)(TIME_SLOT/0.07);
+    // v2: 156 uS for 2000 iterations ; 0.077uS/ iteration
+        uint32_t maxCounts = (int)(TIME_SLOT/0.0635);
 #else
         // v1: 115 uS for 200 iterations; 0.575uS/iteration
         _wait_us(0);  // Wait for ~6uS
@@ -552,7 +626,9 @@ return_error:
         _wait_us(TIME_POST_RESET_TO_DETECT);
 
 #if MICROBIT_CODAL
-        int maxCounts = (int)(TIME_PRESENCE_DETECT/0.05);   // Hand tuned values...Full presence period sample
+    // v2: 462.5 for 2000 iterations ; 0.231uS/iter
+    // Padded down (the "release" needs to be complete)
+        int maxCounts = (int)(TIME_PRESENCE_DETECT/0.1);   // Hand tuned values...Full presence period sample
 #else 
         // v1: 1.705 uS/Iteration
         int maxCounts = (int)(TIME_PRESENCE_DETECT/1);
@@ -564,7 +640,7 @@ return_error:
 #endif
         bool presence = false;        
         do {
-            presence =  presence || (getPinValue(ioPin) == 0);
+            presence = presence || (getPinValue(ioPin) == 0);
         } while (maxCounts-- > 0);
 
         // Confirm that it's released
