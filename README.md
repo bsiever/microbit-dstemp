@@ -34,7 +34,7 @@ Report on any errors
 
 # Recommended usage
 
-It's best to capture the temperature in a variable and only use it if the value isn't -Infinity.  For example:
+It's best to capture the temperature in a variable and only use it if the value isn't -Infinity.  Since -300 C is below absolute zero, ensuring the temperature is over -300 is sufficient.  For example:
 
 ```block
 temp = dstemp.celsius(DigitalPin.P0)
