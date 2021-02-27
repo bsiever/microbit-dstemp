@@ -1,9 +1,8 @@
 {
     "name": "microbit-dstemp",
-    "version": "0.1.15",
+    "version": "0.1.16",
     "description": "Dallas/Maxim DS18B20 Temperature Probe",
     "license": "MIT",
-    "authors": ["Bill Siever <bsiever@gmail.com>"],
     "dependencies": {
         "core": "*"
     },
@@ -24,6 +23,9 @@
         "microbit"
     ],
     "preferredEditor": "tsprj",
+    "authors": [
+        "Bill Siever <bsiever@gmail.com>"
+    ],
     "card": {
         "name": "DS Temp Sensors",
         "imageUrl": "file:../dstemp/icon.png",
