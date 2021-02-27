@@ -2,6 +2,16 @@
 
 This extension allows the micro:bit to use the Dallas Semiconductor DS18B20 temperature sensor.
 
+# Hardware
+
+This module supports use of one or more DS18B20 temperature sensors.  Each sensor must be connected to a separate pin and must include a 4.7k Ohm pull-up resistor between 3V and the signal. 
+
+Common wiring is:
+
+- Micro:bit GND to GND (black wire) of the sensor
+- Micro:bit 3V to Vdd (red wire) of the sensor
+- Micro:bit I/O pin, like ||P0||, to the data in/out (white wire) of the sensor
+
 # Getting the Temperature
 
 ```sig
