@@ -2,8 +2,6 @@
 //% icon="\uf2c8"
 //% block="DS Temp"
 namespace dstemp {
-    // TODO: Review better approach.  These are redundant when on the platform (C-Side)
-    // TODO: Is there a way to "share" fields/variables (without an object)
     //% whenUsed
     let errorHandler:Action = null;
     //% whenUsed
@@ -11,7 +9,6 @@ namespace dstemp {
     //% whenUsed
     let errorPort : number = -1;
 
-    // TODO: Are these in ROM?  Is there a way to unify with C-Code constants
     // TODO: Localization
     const errorMsgs  = [ "No Error", "Not Connected", "Start Error", "Read Timeout", "Conversion Failure"];
 
@@ -59,44 +56,3 @@ namespace dstemp {
         setErrorHandler(errorHandler);
     };
 }
-
-
-/*
-
-
-    /*
-    let count : number = 1;
-
-    // This is the function that will be used in the simulation.  The c-function (ctest()) 
-    // will be used on the actual platform
-    // % blockId="dstemp_ctest" block="Temp. Sensor Ctest"
-    // % shim=dstemp::ctest
-    export function ctest() {
-        console.log("test")
-        error = "c"+count
-        count++
-        errorHandler()
-    }
-    
-    //% blockId="setup" block="DS Temp. Probe at pin %pin"
-    //% shim=dstemp::setup
-    export function setup(pin: DigitalPin) {
-        console.log("test")
-        basic.showString("S4!")
-    }
-
-if (ble_running())
-        return MICROBIT_NOT_SUPPORTED;
-        
-          if (status & MICROBIT_RADIO_STATUS_INITIALISED)
-
- if (radioEnable() != MICROBIT_OK) return 0;         
-       
- 
-  //   // % blockId="celsius4" block="Temp. in Celsius 3"
- //   // % shim=dstemp::celsius
- //  export function celsius(): number {
- //       return 32.6;
- //    }
-
-        */

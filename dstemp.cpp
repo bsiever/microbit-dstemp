@@ -1,7 +1,7 @@
 /**
 * Bill Siever
 * 2018-10-10
-* 2020-02-07 CODAL and V2 updates
+* 2021-02-27 CODAL and V2 updates
 *
 * Development environment specifics:
 * Written in Microsoft PXT
@@ -20,14 +20,19 @@
 #include "nrf.h"
 #include "MicroBitSystemTimer.h"
 
+
+// Enable debugging: Debugging uses #ifdefs, so uncomment or comment out 
 //#define DEBUG 1
 // DEBUG uses ioPin P1 to indicate sampling of read (for timing calibration)
 using namespace pxt;
 
 
 #if MICROBIT_CODAL
+// ********************* V2/CODAL Specific Functions ***********************
 
-#ifdef NRF_P1
+// Example of port mapping from V1 codebase 
+// From: codal-nrf52/source/NRF52Pin.cpp
+#ifdef NRF_P1   
     #define PORT (pin < 32 ? NRF_P0 : NRF_P1)
     #define PIN ((pin) & 31)
     #define NUM_PINS 48
@@ -45,7 +50,8 @@ using namespace pxt;
     static bool getPinValue(_GPIO pin)    { return (PORT->IN & (1 << PIN)) ? 1 : 0; }
 
     static void configTimer() {
-
+        // Ensure that the external crystal is being used (higher precision)
+        // and that the system timer is in 32-bit mode
         static NRF_TIMER_Type *timer = NULL;
 
         // If we haven't gotten the timer yet, do startup tasks, including getting the timer.
@@ -60,7 +66,7 @@ using namespace pxt;
             // Disable timer
             timer->TASKS_STOP = 1;
             // Set bit mode
-            timer->BITMODE = 3;
+            timer->BITMODE = 3;  // Ensure 32-bit mode (error in CODAL was resulting in 24-bit mode)
             // Restart it
             timer->TASKS_START = 1;
             NVIC_EnableIRQ(TIMER1_IRQn);
@@ -68,6 +74,8 @@ using namespace pxt;
     }
 
 #else
+// ********************* V1/AL Specific Functions ***********************
+    // Map to NRF library 
     #define _wait_us(us)            wait_us(((us)>5)?(us)-5:0)
     #define _GPIO                   gpio_t*
     #define setToInput(pin)         gpio_dir((pin), PIN_INPUT)
@@ -78,14 +86,13 @@ using namespace pxt;
 
 
 #ifdef DEBUG
-
+// If debugging is enabled create an "indicatePin" to assist timing tests
 #if MICROBIT_CODAL
         _GPIO indicatePin = uBit.io.P1.name;
 #else
         gpio_t indicateObj;
         _GPIO indicatePin = &indicateObj;
 #endif
-
 #endif
 
 namespace dstemp { 
@@ -93,7 +100,6 @@ namespace dstemp {
     // ************* Forward Decalarations
     void loopUntilSent(ManagedString str);
     void loopUntilSent(int str);
-    void waitOut(unsigned long start, unsigned long duration, bool yield = true);
     void writeBit(_GPIO ioPin, bool one, bool finalYield = true);
     void writeByte(_GPIO ioPin, uint8_t b, bool finalYield = true);
     bool readBit(_GPIO ioPin);
@@ -146,8 +152,6 @@ namespace dstemp {
         if(errorHandler)    
             pxt::incr(errorHandler);
     }
- 
-
  
     /*
      * Helper method to send an actual error code to the registered handler.
@@ -204,6 +208,8 @@ namespace dstemp {
     }
 
 
+// Calibration code that can be used to debug timing issues and 
+// identify values for constants
 #ifdef DEBUG
     void calibrate(_GPIO gpio) {
         // Misc tests.
@@ -273,10 +279,15 @@ namespace dstemp {
         setToOutput(gpio);
     }
 #endif
+
+
+
      //% 
     float celsius(int pin) {
         // Only needs to be done once, but done every call...
 #if MICROBIT_CODAL
+        // CODAL may not be using external crystal by default; Update it
+        // May also be using 24-bit timer
         configTimer();
 #endif
         // Get corresponding I/O ioPin Object
@@ -289,6 +300,7 @@ namespace dstemp {
         gpio_init(gpio, mbp->name);
 #endif
  
+ // If debugging, configure the indicate pin
 #ifdef DEBUG
 #if MICROBIT_CODAL
 #else
@@ -302,6 +314,7 @@ namespace dstemp {
 
 
 #ifdef DEBUG
+    // Optional calibration (rather than actually running)
     // calibrate(gpio);
     // return 0;
 #endif 
@@ -419,24 +432,6 @@ return_error:
 #endif 
 
     /*
-     * Wait until the designated duration has elapsed from the start time.  This uses sleep() to 
-     * allow other fibers to run and may exceed the given time (i.e., not for time sensitive waits)
-     * @param start the start time in uS based on system_timer_current_time_us()
-     * @param duration the total duration in uS
-     */
-    // Wait out any remaining time to ensure the expected duration elapses after the start event.
-    void waitOut(unsigned long start, unsigned long duration, bool yield) {
-        // Yield to other threads
-        if(yield) 
-          uBit.sleep(0);
-
-        // If there's any time left to wait
-        long  waitTime = duration-(system_timer_current_time_us()-start);
-        if(waitTime>0)
-            _wait_us(waitTime);
-    }
-
-    /*
      * Write a bit
      * @param ioPin The MicroBitPin pin to use. 
      * @param one A boolean: true indicates send a 1; false indicates send a 0
@@ -448,7 +443,6 @@ return_error:
         _wait_us(TIME_RECOV);
 
         // Start bus transaction
- //       unsigned long startTime = system_timer_current_time_us();
         setPinValue(ioPin, 0);
         // Time sensitive delay
         _wait_us(one ? TIME_ONE_LOW : TIME_ZERO_LOW);
@@ -497,7 +491,7 @@ return_error:
 
         // Sample for ~70uS after releasing 
 #if MICROBIT_CODAL
-    // v2: 156 uS for 2000 iterations ; 0.077uS/ iteration
+        // v2: 156 uS for 2000 iterations ; 0.077uS/ iteration
         uint32_t maxCounts = (int)(TIME_SLOT/0.0635);
 #else
         // v1: 115 uS for 200 iterations; 0.575uS/iteration
@@ -581,8 +575,8 @@ return_error:
         _wait_us(TIME_POST_RESET_TO_DETECT);
 
 #if MICROBIT_CODAL
-    // v2: 462.5 for 2000 iterations ; 0.231uS/iter
-    // Padded down (the "release" needs to be complete)
+        // v2: 462.5 for 2000 iterations ; 0.231uS/iter
+        // Padded down (the "release" needs to be complete)
         int maxCounts = (int)(TIME_PRESENCE_DETECT/0.1);   // Hand tuned values...Full presence period sample
 #else 
         // v1: 1.705 uS/Iteration

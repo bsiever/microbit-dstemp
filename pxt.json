@@ -1,8 +1,9 @@
 {
-    "name": "dstemp",
+    "name": "ds-temp",
     "version": "0.1.15",
     "description": "Dallas/Maxim DS18B20 Temperature Probe",
     "license": "MIT",
+    "authors": ["Bill Siever <bsiever@gmail.com>"],
     "dependencies": {
         "core": "*"
     },
@@ -16,13 +17,9 @@
         "parts/ds18b20probe.svg"
     ],
     "testFiles": [
-        "dstest.ts"
+        "test.ts"
     ],
     "public": true,
-    "targetVersions": {
-        "target": "3.1.50",
-        "targetId": "microbit"
-    },
     "supportedTargets": [
         "microbit"
     ],
@@ -31,10 +28,5 @@
         "name": "DS Temp Sensors",
         "imageUrl": "file:../dstemp/icon.png",
         "feedbackUrl": "http://siever.info"
-    },
-    "extension": {
-        "namespace": "dstemp",
-        "label": "Simulation Settings",
-        "localUrl": "http://127.0.0.1:8080/index.html"
     }
 }
