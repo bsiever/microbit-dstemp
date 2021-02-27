@@ -1,5 +1,5 @@
 {
-    "name": "ds-temp",
+    "name": "microbit-dstemp",
     "version": "0.1.15",
     "description": "Dallas/Maxim DS18B20 Temperature Probe",
     "license": "MIT",
