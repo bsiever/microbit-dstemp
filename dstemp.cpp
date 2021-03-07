@@ -135,6 +135,7 @@ namespace dstemp {
 
     const int MAX_TRIES = 3;      // Max tries to attempt conversion before fail 
 
+    const int CONVERSION_TIME_US = 800000; // Conversion time for 12-bit
     // ************* State variables 
     int errorObjectIdx = 0;
     int errorPort = 0;
@@ -202,11 +203,6 @@ namespace dstemp {
 
         // Write: Function command - Convert 44h 
         writeByte(ioPin, 0x44, false);
-
-        // setToInput(gpio);
-        // _wait_us(100);
-        // setToOutput(gpio);
-        // setPinValue(indicatePin, 1);
 
         return true;
         // Read Time Slot
@@ -357,22 +353,7 @@ namespace dstemp {
         }
 
         // 2. Wait for conversion to complete 
-        _wait_us(850000);
-        // success = false;
-        // for(int maxIterations = 20; maxIterations>0; maxIterations--) {
-        //     if(readBit(gpio) == 0) {
-        //         success = true;
-        //         break;
-        //     } else {
-        //         // Wait for conversion to complete. 
-        //         uBit.sleep(0);
-        //     }
-        // }
-        // // If not successful, error
-        // if(success==false) {
-        //     error(4, pin);
-        //     goto return_error;
-        // }
+        _wait_us(CONVERSION_TIME_US);
 
         // 3. Retrieve Data 
         for(int tries=0;tries<MAX_TRIES;tries++) {
@@ -512,7 +493,6 @@ return_error:
         } while(maxCounts-->0);
 
         // Switch back to output
-//        setPinValue(ioPin,1);
         setToOutput(ioPin);
         setPinValue(ioPin,1);
 
