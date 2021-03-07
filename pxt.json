@@ -1,7 +1,7 @@
 {
     "name": "microbit-dstemp",
-    "version": "0.1.18",
-    "description": "Dallas/Maxim DS18B20 Temperature Probe",
+    "version": "0.1.00",
+    "description": "Dallas/Maxim DS18B20 Temperature Probe; 2-Wire (Parasitic Power)",
     "license": "MIT",
     "dependencies": {
         "core": "*"
@@ -13,7 +13,7 @@
         "shims.d.ts",
         "enums.d.ts",
         "pxtparts.json",
-        "parts/ds18b20probe.svg"
+        "parts/ds18b20probe2Wire.svg"
     ],
     "testFiles": [
         "test.ts"

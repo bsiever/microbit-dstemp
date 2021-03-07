@@ -44,8 +44,8 @@ using namespace pxt;
 
     #define _wait_us(us)          system_timer_wait_cycles((us)==0? 1: 10*(us)) 
     #define _GPIO                   int
-    static void setToInput(_GPIO pin)     { PORT->PIN_CNF[PIN] &= 0xfffffffc; }
-    static void setToOutput(_GPIO pin)    { PORT->PIN_CNF[PIN] |= 3; }
+    static void setToInput(_GPIO pin)     { PORT->PIN_CNF[PIN] &= 0xfffffffc; PORT->PIN_CNF[PIN] = (PORT->PIN_CNF[PIN] & 0xfffffff3) | 0x0000000c; }
+    static void setToOutput(_GPIO pin)    { PORT->PIN_CNF[PIN] = (PORT->PIN_CNF[PIN] & 0xfffffff3);  PORT->PIN_CNF[PIN] |= 3; }
     static void setPinValue(_GPIO pin, int val) { if (val) PORT->OUTSET = 1 << PIN; else PORT->OUTCLR = 1 << PIN;}
     static bool getPinValue(_GPIO pin)    { return (PORT->IN & (1 << PIN)) ? 1 : 0; }
 

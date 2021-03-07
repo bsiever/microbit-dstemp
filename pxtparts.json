@@ -7,11 +7,10 @@
             "pinDistance": 3,
             "pinLocations": [
                 {"x": 0.5, "y": 1.8},
-                {"x": 3.5, "y": 1.8},
                 {"x": 6.5, "y": 1.8}
             ]
         },
-        "numberOfPins": 3,
+        "numberOfPins": 2,
         "instantiation": {
             "kind": "function",
             "fullyQualifiedName": "dstemp.celsius",
@@ -21,7 +20,6 @@
         },
         "pinDefinitions": [
             {"target": {"pinInstantiationIdx": 0}, "style": "croc", "orientation": "+Z" },
-            {"target": "threeVolt", "style": "croc", "orientation": "+Z" },
             {"target": "ground", "style": "croc", "orientation": "+Z" }
         ],
         "assembly": [
@@ -33,8 +31,7 @@
             },
             {
                 "pinIndices": [
-                    1,
-                    2
+                    1
                 ]
             }
         ]
