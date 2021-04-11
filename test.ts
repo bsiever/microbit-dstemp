@@ -10,13 +10,13 @@ input.onButtonPressed(Button.A, function () {
 //      basic.showNumber(dstemp.celsius(DigitalPin.P0))
 })
 
-dstemp.sensorError(function (ErrorMessage, ErrorCode, Port) {
+dstemp.sensorError(function (errorMessage, errorCode, port) {
     serial.writeString("\n");
-    serial.writeString(ErrorMessage);
+    serial.writeString(errorMessage);
     serial.writeString(" code=");
-    serial.writeNumber(ErrorCode);
+    serial.writeNumber(errorCode);
     serial.writeString(" port=");
-    serial.writeNumber(Port);
+    serial.writeNumber(port);
     serial.writeString("\n");
 //    basic.showString("err")
 //    basic.showNumber(ErrorCode)

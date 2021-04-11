@@ -28,14 +28,14 @@ Get the current temperature in Celsius.  Returns `-Infinity` on error.
 
 
 ```sig
-dstemp.sensorError(errCallback: (ErrorMessage: string, ErrorCode: number, Port: number) => void) { 
+dstemp.sensorError(errCallback: (errorMessage: string, errorCode: number, port: number) => void) { 
 ```
 
 Report on any errors
 
-- `ErrorMessage` will be a string describing the error
-- `ErrorCode` will be a numeric code
-- `Port` will indicate which specific port encountered the error (if multiple sensors are connected)
+- `||errorMessage||` will be a string describing the error
+- `||errorCode||` will be a numeric code
+- `||port||` will indicate which specific port encountered the error (if multiple sensors are connected)
 
 # Recommended usage
 
