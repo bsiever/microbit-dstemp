@@ -292,7 +292,7 @@ namespace dstemp {
         // CODAL may not be using external crystal by default; Update it
         // May also be using 24-bit timer
 #ifdef SOFTDEVICE_PRESENT
-        if (!ble_running())
+        if (!ble_running()) // Only configTimer if either no soft-dev or no ble
 #endif
                 configTimer();
 #endif
