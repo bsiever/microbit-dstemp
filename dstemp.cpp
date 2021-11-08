@@ -72,7 +72,7 @@ using namespace pxt;
             NVIC_EnableIRQ(TIMER1_IRQn);
 
             // Call timer calibration
-            system_timer_calibrate_cycles();
+            //system_timer_calibrate_cycles();
         }
     }
 
@@ -291,7 +291,10 @@ namespace dstemp {
 #if MICROBIT_CODAL
         // CODAL may not be using external crystal by default; Update it
         // May also be using 24-bit timer
-        configTimer();
+#ifdef SOFTDEVICE_PRESENT
+        if (!ble_running())
+#endif
+                configTimer();
 #endif
         // Get corresponding I/O ioPin Object
         MicroBitPin *mbp = getPin(pin);  // This returns a "uBit.io.P0" type thing
