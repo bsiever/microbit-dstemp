@@ -12,7 +12,7 @@ namespace dstemp {
     // TODO: Localization
     const errorMsgs  = [ "No Error", "Not Connected", "Start Error", "Read Timeout", "Conversion Failure"];
 
-    //% blockId="celsius" block="temperature (\u00B0\\C) on %pin|"
+    //% block="temperature (\u00B0\\C) on %pin|"
     //% shim=dstemp::celsius
     //% parts=dstemp trackArgs=0
     export function celsius(pin: DigitalPin) : number {
@@ -41,7 +41,7 @@ namespace dstemp {
      * Set a handler for errors 
      * @param errCallback The error handler 
      */
-    //% blockId="error" block="temperature sensor error"
+    //% block="temperature sensor error"
     //% draggableParameters="reporter" weight=0
     export function sensorError(errCallback: (errorMessage: string, errorCode: number, port: number) => void) { 
         if(errCallback) {
